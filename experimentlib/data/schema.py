@@ -16,6 +16,7 @@ class Group(enum.Enum):
     LOG = 'log'
     EVENT = 'event'
     STATUS = 'status'
+    SYSLOG = 'syslog'
 
     # Gas flow
     MFC = 'mfc'

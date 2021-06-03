@@ -19,10 +19,10 @@ def __recurse_subclasses(subclass_list):
     return return_list
 
 
-TClass = typing.TypeVar('TClass', bound=object)
+T_OBJECT = typing.TypeVar('T_OBJECT', bound=object)
 
 
-def get_subclasses(class_root: typing.Type[TClass]) -> typing.List[typing.Type[TClass]]:
+def get_subclasses(class_root: typing.Type[T_OBJECT]) -> typing.List[typing.Type[T_OBJECT]]:
     """ Get a list of subclasses for a given parent class.
 
     :param class_root: parent class type

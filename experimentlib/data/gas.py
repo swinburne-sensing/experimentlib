@@ -7,21 +7,30 @@ from typing import List, Optional
 import attr
 
 from experimentlib.data import unit
+from experimentlib.util import storage
 
 
 class GasError(Exception):
     pass
 
 
-class GasMixError(GasError):
+class CalculationError(GasError):
     pass
 
 
-class GasRatioError(GasError):
+class NegativeQuantityError(CalculationError):
     pass
 
 
-class UnknownGas(GasError):
+class MixingError(GasError):
+    pass
+
+
+class ParserError(GasError):
+    pass
+
+
+class UnknownGas(ParserError):
     pass
 
 
@@ -30,14 +39,14 @@ class MolecularStructure(enum.Enum):
 
     Reference: MKS (https://www.mksinst.com/n/flow-measurement-control-frequently-asked-questions)
     """
-    MONOTOMIC = 1.03
+    MONATOMIC = 1.03
     DIATOMIC = 1
     TRIATOMIC = 0.941
     POLYATOMIC = 0.88
 
 
 @attr.s(frozen=True)
-class ChemicalProperties(object):
+class ChemicalProperties(storage.RegistryEntry):
     UNIT_DENSITY = unit.registry.g / unit.registry.L
     UNIT_SPECIFIC_HEAT = unit.registry.cal / unit.registry.g
 
@@ -65,88 +74,252 @@ class ChemicalProperties(object):
         else:
             return self.name
 
+    @property
+    def registry_name(self) -> str:
+        return self.name
 
-class Registry(object):
-    air = ChemicalProperties('Air', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=0.24, density=1.293, inert=True)
-    acetone = ChemicalProperties('Acetone', '(CH_3)_2CO', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.51,
-                                 density=0.21)
-    ammonia = ChemicalProperties('Ammonia', 'NH_3', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.492,
-                                 density=0.76)
-    argon = ChemicalProperties('Argon', 'Ar', molecular_structure=MolecularStructure.MONOTOMIC, specific_heat=0.1244, density=1.782,
-                               inert=True)
-    arsine = ChemicalProperties('Arsine', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.1167, density=3.478)
-    bromine = ChemicalProperties('Bromine', 'BR_2', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=0.0539,
-                                 density=7.13)
-    carbon_dioxide = ChemicalProperties('Carbon-dioxide', 'CO_2', molecular_structure=MolecularStructure.TRIATOMIC,
-                                        specific_heat=0.2016, density=1.964)
-    carbon_monoxide = ChemicalProperties('Carbon-monoxide', 'CO', molecular_structure=MolecularStructure.DIATOMIC,
-                                         specific_heat=0.2488, density=1.25)
-    carbon_tetrachloride = ChemicalProperties('Carbon-tetrachloride', molecular_structure=MolecularStructure.POLYATOMIC,
-                                              specific_heat=0.1655, density=6.86)
-    carbon_tetraflouride = ChemicalProperties('Carbon-tetraflouride', molecular_structure=MolecularStructure.POLYATOMIC,
-                                              specific_heat=0.1654, density=3.926)
-    chlorine = ChemicalProperties('Chlorine', 'Cl_2', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=0.1144,
-                                  density=3.163)
-    cyanogen = ChemicalProperties('Cyanogen', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.2613, density=2.322)
-    deuterium = ChemicalProperties('Deuterium', 'H_2/D_2', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=1.722,
-                                   density=0.1799)
-    ethane = ChemicalProperties('Ethane', 'C_2H_6', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.4097,
-                                density=1.342)
-    fluorine = ChemicalProperties('Fluorine', 'F_2', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=0.1873,
-                                  density=1.695)
-    helium = ChemicalProperties('Helium', 'He', molecular_structure=MolecularStructure.MONOTOMIC, specific_heat=1.241,
-                                density=0.1786)
-    hexane = ChemicalProperties('Hexane', 'C_6H14', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.54,
-                                density=0.672)
-    hydrogen = ChemicalProperties('Hydrogen', 'H_2', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=3.3852,
-                                  density=0.0899)
-    hydrogen_chloride = ChemicalProperties('Hydrogen-chloride', 'HCl', molecular_structure=MolecularStructure.DIATOMIC,
-                                           specific_heat=0.1912, density=1.627)
-    hydrogen_fluoride = ChemicalProperties('Hydrogen-fluoride', 'HF', molecular_structure=MolecularStructure.DIATOMIC,
-                                           specific_heat=0.3479, density=0.893)
-    methane = ChemicalProperties('Methane', 'CH_4', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.5223,
-                                 density=0.716)
-    neon = ChemicalProperties('Neon', 'Ne', molecular_structure=MolecularStructure.MONOTOMIC, specific_heat=0.246, density=0.9)
-    nitric_oxide = ChemicalProperties('Nitric-oxide', 'NO', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=0.2328,
-                                      density=1.339)
-    nitric_oxides = ChemicalProperties('Nitric-oxides', 'NO_x')
-    nitrogen = ChemicalProperties('Nitrogen', 'N_2', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=0.2485,
-                                  density=1.25, inert=True)
-    nitrogen_dioxide = ChemicalProperties('Nitrogen-dioxide', 'NO_2', molecular_structure=MolecularStructure.TRIATOMIC,
-                                          specific_heat=0.1933, density=2.052)
-    nitrous_oxide = ChemicalProperties('Nitrous-oxide', 'N_2O', molecular_structure=MolecularStructure.TRIATOMIC,
-                                       specific_heat=0.2088, density=1.964)
-    oxygen = ChemicalProperties('Oxygen', 'O_2', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=0.2193,
-                                density=1.427)
-    phosphine = ChemicalProperties('Phosphine', 'PH_3', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.2374,
-                                   density=1.517)
-    propane = ChemicalProperties('Propane', 'C_3H_8', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.3885,
-                                 density=1.967)
-    propylene = ChemicalProperties('Propylene', 'C_3H_6', molecular_structure=MolecularStructure.POLYATOMIC, specific_heat=0.3541,
-                                   density=1.877)
-    sulfur_hexafluoride = ChemicalProperties('Sulfur Hexaflouride', 'SF_6', molecular_structure=MolecularStructure.POLYATOMIC,
-                                             specific_heat=0.1592, density=6.516)
-    xenon = ChemicalProperties('Xenon', 'Xe', molecular_structure=MolecularStructure.MONOTOMIC, specific_heat=0.0378, density=5.858)
 
-    humid_air = ChemicalProperties('Humid Air', molecular_structure=MolecularStructure.DIATOMIC, specific_heat=0.24, density=1.293,
-                                   inert=True, humid=True)
-    humid_argon = ChemicalProperties('Humid Argon', 'Ar', molecular_structure=MolecularStructure.MONOTOMIC, specific_heat=0.1244,
-                                     density=1.782, inert=True, humid=True)
-    humid_nitrogen = ChemicalProperties('Humid Nitrogen', 'N_2', molecular_structure=MolecularStructure.DIATOMIC,
-                                        specific_heat=0.2485, density=1.25, inert=True, humid=True)
+registry = storage.Registry([
+    ChemicalProperties(
+        'Air',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.24,
+        density=1.293,
+        inert=True
+    ),
+    ChemicalProperties(
+        'Acetone', '(CH_3)_2CO',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.51,
+        density=0.21
+    ),
+    ChemicalProperties(
+        'Ammonia', 'NH_3',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.492,
+        density=0.76
+    ),
+    ChemicalProperties(
+        'Argon', 'Ar',
+        molecular_structure=MolecularStructure.MONATOMIC,
+        specific_heat=0.1244,
+        density=1.782,
+        inert=True
+    ),
+    ChemicalProperties(
+        'Arsine', molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.1167,
+        density=3.478
+    ),
+    ChemicalProperties(
+        'Bromine', 'BR_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.0539,
+        density=7.13
+    ),
+    ChemicalProperties(
+        'Carbon-dioxide', 'CO_2',
+        molecular_structure=MolecularStructure.TRIATOMIC,
+        specific_heat=0.2016,
+        density=1.964
+    ),
+    ChemicalProperties(
+        'Carbon-monoxide', 'CO',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.2488,
+        density=1.25
+    ),
+    ChemicalProperties(
+        'Carbon-tetrachloride',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.1655,
+        density=6.86
+    ),
+    ChemicalProperties(
+        'Carbon-tetraflouride',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.1654,
+        density=3.926
+    ),
+    ChemicalProperties(
+        'Chlorine', 'Cl_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.1144,
+        density=3.163
+    ),
+    ChemicalProperties(
+        'Cyanogen',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.2613,
+        density=2.322
+    ),
+    ChemicalProperties(
+        'Deuterium', 'H_2/D_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=1.722,
+        density=0.1799
+    ),
+    ChemicalProperties(
+        'Ethane', 'C_2H_6',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.4097,
+        density=1.342
+    ),
+    ChemicalProperties(
+        'Fluorine', 'F_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.1873,
+        density=1.695
+    ),
+    ChemicalProperties(
+        'Helium', 'He',
+        molecular_structure=MolecularStructure.MONATOMIC,
+        specific_heat=1.241,
+        density=0.1786
+    ),
+    ChemicalProperties(
+        'Hexane', 'C_6H14',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.54,
+        density=0.672
+    ),
+    ChemicalProperties(
+        'Hydrogen', 'H_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=3.3852,
+        density=0.0899
+    ),
+    ChemicalProperties(
+        'Hydrogen-chloride', 'HCl',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.1912,
+        density=1.627
+    ),
+    ChemicalProperties(
+        'Hydrogen-fluoride', 'HF',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.3479,
+        density=0.893
+    ),
+    ChemicalProperties(
+        'Methane', 'CH_4',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.5223,
+        density=0.716
+    ),
+    ChemicalProperties(
+        'Neon', 'Ne',
+        molecular_structure=MolecularStructure.MONATOMIC,
+        specific_heat=0.246,
+        density=0.9
+    ),
+    ChemicalProperties(
+        'Nitric-oxide', 'NO',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.2328,
+        density=1.339
+    ),
+    ChemicalProperties(
+        'Nitric-oxides', 'NO_x'
+    ),
+    ChemicalProperties(
+        'Nitrogen', 'N_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.2485,
+        density=1.25,
+        inert=True
+    ),
+    ChemicalProperties(
+        'Nitrogen-dioxide', 'NO_2',
+        molecular_structure=MolecularStructure.TRIATOMIC,
+        specific_heat=0.1933,
+        density=2.052
+    ),
+    ChemicalProperties(
+        'Nitrous-oxide', 'N_2O',
+        molecular_structure=MolecularStructure.TRIATOMIC,
+        specific_heat=0.2088,
+        density=1.964
+    ),
+    ChemicalProperties(
+        'Oxygen', 'O_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.2193,
+        density=1.427
+    ),
+    ChemicalProperties(
+        'Phosphine', 'PH_3',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.2374,
+        density=1.517
+    ),
+    ChemicalProperties(
+        'Propane', 'C_3H_8',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.3885,
+        density=1.967
+    ),
+    ChemicalProperties(
+        'Propylene', 'C_3H_6',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.3541,
+        density=1.877
+    ),
+    ChemicalProperties(
+        'Sulfur Hexaflouride', 'SF_6',
+        molecular_structure=MolecularStructure.POLYATOMIC,
+        specific_heat=0.1592,
+        density=6.516
+    ),
+    ChemicalProperties(
+        'Xenon', 'Xe',
+        molecular_structure=MolecularStructure.MONATOMIC,
+        specific_heat=0.0378,
+        density=5.858
+    ),
+
+    ChemicalProperties(
+        'Humid Air',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.24,
+        density=1.293,
+        inert=True,
+        humid=True
+    ),
+    ChemicalProperties(
+        'Humid Argon', 'Ar',
+        molecular_structure=MolecularStructure.MONATOMIC,
+        specific_heat=0.1244,
+        density=1.782,
+        inert=True,
+        humid=True
+    ),
+    ChemicalProperties(
+        'Humid Nitrogen', 'N_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.2485,
+        density=1.25,
+        inert=True,
+        humid=True
+    )
+])
 
 
 @attr.s(frozen=True)
 class Component(object):
     # Actual concentration
-    quantity: unit.Quantity = attr.ib(converter=unit.Quantity(unit.registry.dimensionless))
+    quantity: unit.Quantity = attr.ib(converter=unit.converter(unit.dimensionless))
 
     # Gas type
     properties: ChemicalProperties = attr.ib()
 
     def __attrs_post_init__(self):
+        # Check for negative concentrations
+        if self.quantity < 0:
+            raise NegativeQuantityError('Gas concentration cannot be below zero')
+
         # Scale concentration to look nice
-        magnitude = abs(self.quantity.m_as(unit.registry.dimensionless))
+        magnitude = abs(self.quantity.m_as(unit.dimensionless))
 
         if magnitude >= 1e-4:
             units = unit.registry.pct
@@ -158,6 +331,11 @@ class Component(object):
             units = unit.registry.dimensionless
 
         object.__setattr__(self, 'quantity', self.quantity.to(units))
+
+    @property
+    def gcf(self) -> float:
+        return (0.3106 * self.properties.molecular_structure.value /
+                (self.properties.density * self.properties.specific_heat)).magnitude
 
     def __rmul__(self, other):
         return Component(other * self.quantity, self.properties)
@@ -172,18 +350,23 @@ class Mixture(object):
     components: List[Component] = attr.ib()
 
     # Balance gas
-    balance: ChemicalProperties = attr.ib()
+    balance: Component = attr.ib()
 
     _GAS_CONCENTRATION_PATTERN = re.compile(r'^([\d]+\.?[\d]*)[ ]?([%\w]+) ([\w\s-]+)')
 
-    @property
-    def balance_ratio(self) -> unit.Quantity:
-        ratio = 1
+    def __attrs_post_init__(self):
+        # Check components and balance do not exceed 100% within a small tolerance (ppt)
+        overall_quantity = self.balance.quantity
 
         for component in self.components:
-            ratio -= component.quantity
+            overall_quantity += component.quantity
 
-        return ratio
+        if (overall_quantity.m_as(unit.dimensionless) - 1) > 1e-12:
+            raise CalculationError(f"Gases in mixture sum to over 100% (components: "
+                                   f"{', '.join(map(str, self.components))}, balance: {self.balance})")
+
+        # Sort components by concentration
+        object.__setattr__(self, 'components', sorted(self.components, key=lambda x: x.quantity, reverse=True))
 
     @property
     def humid(self) -> bool:
@@ -191,7 +374,7 @@ class Mixture(object):
 
         :return:
         """
-        return any((component.properties.humid for component in self.components)) or self.balance.humid
+        return any((component.properties.humid for component in self.components)) or self.balance.properties.humid
 
     @property
     def humid_ratio(self) -> unit.Quantity:
@@ -209,15 +392,18 @@ class Mixture(object):
 
         :return:
         """
-        return all((component.properties.inert for component in self.components)) and self.balance.inert
+        return all((component.properties.inert for component in self.components)) and self.balance.properties.inert
 
     @property
     def gcf(self) -> float:
-        """
+        """ Gas correction factor used for mass flow control.
 
-        :return:
+        :return: gas correction factor
         """
-        pass
+        components = self.components + [self.balance]
+
+        return (0.3106 * sum((c.quantity * c.properties.molecular_structure.value for c in components)) /
+                sum((c.quantity * c.properties.density * c.properties.specific_heat for c in components))).magnitude
 
     def __str__(self):
         if len(self.components) > 0:
@@ -225,39 +411,62 @@ class Mixture(object):
         else:
             return str(self.balance)
 
-    def __rmul__(self, other):
+    def __mul__(self, other):
         if isinstance(other, int):
             other = float(other)
         elif isinstance(other, unit.Quantity):
             if not other.dimensionless:
-                raise GasRatioError('Multiply factor must be dimensionless')
+                raise CalculationError('Multiplication factor must be dimensionless')
 
             # Cast to magnitude
             other = other.to('dimensionless').quantity
 
         if not isinstance(other, float):
-            raise GasRatioError('Incompatible multiplication factor')
+            raise NotImplementedError(f"Cannot multiply {type(other)} by Mixture")
 
         scaled_gases = [other * gas for gas in self.components]
 
         return Mixture(scaled_gases, self.balance)
 
+    def __rmul__(self, other):
+        return self * other
+
     def __add__(self, other):
-        gas_conc_dict = {}
+        gas_component_dict = {}
 
-        if not isinstance(other, Mixture):
-            raise GasMixError('Incompatible class')
+        if isinstance(other, Mixture):
+            if self.balance.properties != other.balance.properties:
+                raise MixingError(f"Incompatible balance components {self.balance} != {other.balance}")
 
-        if self.balance != other.balance:
-            raise GasMixError(f"Incompatible balance components {self.balance} != {other.balance}")
+            for component in self.components + other.components:
+                if component.properties in gas_component_dict:
+                    gas_component_dict[component.properties] += component.quantity
+                else:
+                    gas_component_dict[component.properties] = component.quantity
 
-        for gas_conc in self.components + other.components:
-            if gas_conc.properties in gas_conc_dict:
-                gas_conc_dict[gas_conc.properties] += gas_conc.quantity
-            else:
-                gas_conc_dict[gas_conc.properties] = gas_conc.quantity
+            return Mixture.auto_balance(
+                [Component(quantity, properties) for properties, quantity in gas_component_dict.items()],
+                self.balance.properties
+            )
+        elif isinstance(other, Component):
+            self.components.append(other)
 
-        return Mixture([Component(conc, gas) for gas, conc in gas_conc_dict.items()], self.balance)
+            return self
+        else:
+            raise NotImplementedError(f"Cannot add {type(other)} to Mixture")
+
+    def __radd__(self, other):
+        return self + other
+
+    @classmethod
+    def auto_balance(cls, components: List[Component], balance: ChemicalProperties) -> Mixture:
+        # Calculate balance concentration automatically
+        balance_quantity = 1
+
+        for component in components:
+            balance_quantity -= component.quantity
+
+        return Mixture(components, Component(balance_quantity, balance))
 
     @classmethod
     def from_str(cls, gas_list_str: str) -> Mixture:
@@ -274,22 +483,14 @@ class Mixture(object):
                 concentration = unit.Quantity(gas_comp[1] + ' ' + gas_comp[2])
                 gas_name = gas_comp[3].strip()
             else:
-                concentration = unit.Quantity(1, unit.registry.dimensionless)
+                concentration = unit.Quantity(1, unit.dimensionless)
                 gas_name = gas_str
 
-            gas = None
-
-            if gas_name.lower() in library:
-                gas = library[gas_name.lower()]
+            if gas_name.lower() in registry:
+                gas = registry[gas_name.lower()]
             else:
-                for gas_obj in library.values():
-                    if gas_name == gas_obj.name:
-                        gas = gas_obj
-                        break
-
-            if gas is None:
                 raise UnknownGas(f"Unknown gas \"{gas_name}\" (from: \"{gas_str}\")")
 
             gases.append(Component(concentration, gas))
 
-        return Mixture(gases[:-1], gases[-1].properties)
+        return cls.auto_balance(gases[:-1], gases[-1].properties)

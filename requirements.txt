@@ -1,0 +1,8 @@
+attrs==21.2.0
+colorama==0.4.4
+influxdb==5.3.1
+pint==0.17
+python-pushover==0.4
+pyyaml==5.4.1
+ratelimit==2.2.1
+tenacity==7.0.0

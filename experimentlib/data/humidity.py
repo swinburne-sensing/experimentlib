@@ -111,7 +111,7 @@ def dew_to_rel(temperature: _TYPE_INPUT, dew_temperature: _TYPE_INPUT) -> unit.Q
     pws = _humidity_calc_pws_exp(temperature)
     pwd = _humidity_calc_pws_exp(dew_temperature)
 
-    return unit.Quantity(pwd / pws, unit.registry.dimensionless).to(unit_rel)
+    return unit.Quantity(pwd / pws, unit.dimensionless).to(unit_rel)
 
 
 # Calculate dew point from temperature and relative_humidity
@@ -123,10 +123,10 @@ def rel_to_dew(temperature: _TYPE_INPUT, relative_humidity: _TYPE_INPUT) -> unit
     :return: dew point temperature as Quantity
     """
     temperature = unit.parse(temperature, unit.registry.degC)
-    relative_humidity = unit.parse(relative_humidity, unit.registry.dimensionless)
+    relative_humidity = unit.parse(relative_humidity, unit.dimensionless)
 
     (a, m, tn) = _humidity_calc_pws_exp_constants(temperature)
-    pws = _humidity_calc_pws_exp(temperature) * relative_humidity.m_as(unit.registry.dimensionless)
+    pws = _humidity_calc_pws_exp(temperature) * relative_humidity.m_as(unit.dimensionless)
 
     return unit.Quantity(tn / (m / (math.log10(pws.m_as('hPa') / a)) - 1), unit.registry.degC)
 
@@ -141,8 +141,8 @@ def rel_to_abs(temperature: _TYPE_INPUT, relative_humidity: _TYPE_INPUT) -> unit
     """
     # Convert types
     temperature = unit.parse(temperature, unit.registry.degC)
-    relative_humidity = unit.parse(relative_humidity, unit.registry.dimensionless)
+    relative_humidity = unit.parse(relative_humidity, unit.dimensionless)
 
-    pw = _humidity_calc_pws_exp(temperature) * relative_humidity.m_as(unit.registry.dimensionless)
+    pw = _humidity_calc_pws_exp(temperature) * relative_humidity.m_as(unit.dimensionless)
 
     return unit.Quantity((_HUMID_ABS_C * pw.to('Pa') / temperature).quantity, unit_abs)

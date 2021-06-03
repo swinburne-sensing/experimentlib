@@ -29,6 +29,9 @@ registry.define('ppb = count / 1e9')
 
 registry.define('standard_cubic_centimeter_per_minute = cm ** 3 / min = sccm')
 
+# Shortcuts for dimensionless quantities
+dimensionless = registry.dimensionless
+
 # Handle pickle/unpickling by overwriting the built-in unit registry
 pint.set_application_registry(registry)
 
@@ -94,7 +97,7 @@ def parse(x: TYPE_PARSE_VALUE, to_unit: typing.Optional[TYPE_PARSE_UNIT] = None)
     """
     # Parse unit if provided as string
     if isinstance(to_unit, str):
-        input_unit = registry[to_unit].units
+        to_unit = registry[to_unit].units
 
     if not isinstance(x, Quantity):
         # Convert int to float
