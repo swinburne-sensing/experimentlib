@@ -3,7 +3,7 @@
 import os
 import re
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 
 # Read properties from __init__.py
@@ -30,7 +30,7 @@ setup(
     author=author,
     maintainer=maintainer,
     maintainer_email=maintainer_email,
-    packages=['experimentlib'],
+    packages=find_packages(),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',

@@ -62,11 +62,12 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
     def __init__(self, stream: typing.Union[str, typing.IO],
                  include_paths: typing.Optional[typing.Iterable[str]] = None):
         if type(stream) is not str:
-            self._stream_root = os.path.split(stream.name)[0]
+            self._stream_root, stream_filename = os.path.split(stream.name)
         else:
             self._stream_root = None
+            stream_filename = '<str>'
 
-        classes.LoggedClass.__init__(self)
+        classes.LoggedClass.__init__(self, f"src:{stream_filename}")
         yaml.SafeLoader.__init__(self, stream)
 
         # Restricted paths for include tag
@@ -80,6 +81,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
                     raise ExtendedError(f"Include path \"{path}\" not a directory")
 
                 self._include_paths.append(path)
+                self.logger().debug(f"Include allowed from \"{path}\"")
 
     @classmethod
     def _format_str(cls, format_str: str) -> str:
@@ -170,7 +172,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         if self._stream_root is None:
             raise ConstructorError('Include tag cannot be used when parsing strings')
 
-        include_path_abs = None
+        include_path_real = None
 
         for include_path in node.value.split(';'):
             include_path_formatted = self._format_str(os.path.expanduser(include_path))
@@ -179,23 +181,23 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
             if not include_path_formatted.startswith('/') and not include_path_formatted.startswith('\\'):
                 include_path_formatted = os.path.join(self._stream_root, include_path_formatted)
 
-            include_path_abs = os.path.realpath(include_path_formatted)
+            include_path_real = os.path.realpath(include_path_formatted)
 
-            if os.path.isfile(include_path_abs):
-                self.logger().info(f"Including: {include_path_abs}")
+            if os.path.isfile(include_path_real):
+                self.logger().info(f"Including: {include_path_real}")
                 break
             else:
-                self.logger().debug(f"File not found: {include_path_abs}")
+                self.logger().debug(f"File not found: {include_path_real}")
 
-        if include_path_abs is None:
+        if include_path_real is None:
             raise IncludeTagError('No valid filename in include tag', node)
 
-        if self._include_paths is not None:
-            if not any((include_path_abs.startswith(path) for path in self._include_paths)):
-                raise IncludeTagError(f"Included file \"{include_path_abs}\" not within restricted include path", node,
+        if len(self._include_paths) > 0:
+            if not any((include_path_real.startswith(path) for path in self._include_paths)):
+                raise IncludeTagError(f"Included file \"{include_path_real}\" not within restricted include path", node,
                                       include_node=False)
 
-        with open(include_path_abs) as f:
+        with open(include_path_real) as f:
             # Include from specified path, inheriting restricted paths
             include_data = yaml.load(f, ExtendedLoader.factory(self._include_paths))
 
@@ -219,3 +221,11 @@ ExtendedLoader.add_constructor('!envreq', ExtendedLoader.construct_env_required)
 ExtendedLoader.add_constructor('!env', ExtendedLoader.construct_env)
 ExtendedLoader.add_constructor('!format', ExtendedLoader.construct_format)
 ExtendedLoader.add_constructor('!include', ExtendedLoader.construct_include)
+
+
+# Wrapper for yaml.load using the extended loader
+def load(stream: typing.Union[str, typing.IO], include_paths: typing.Optional[typing.Iterable[str]] = None):
+    if include_paths:
+        return yaml.load(stream, ExtendedLoader.factory(include_paths))
+    else:
+        return yaml.load(stream, ExtendedLoader)

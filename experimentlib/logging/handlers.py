@@ -206,7 +206,7 @@ class InfluxDBHandler(logging.Handler):
         self.addFilter(filters.discard_name_prefix_factory('urllib3.'))
 
         # Force formatter
-        self.setFormatter(formatters.PushoverFormatter())
+        self.setFormatter(formatters.InfluxDBFormatter())
 
         self._measurement = measurement
 

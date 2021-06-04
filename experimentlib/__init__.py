@@ -1,6 +1,7 @@
-__version__ = '0.4.0dev'
+__version__ = '1.0.0dev'
 
 __author__ = 'Chris Harrison'
+__credits__ = [__author__]
 
 __maintainer__ = 'Chris Harrison'
 __email__ = 'cjharrison@swin.edu.au'
