@@ -75,7 +75,7 @@ class ChemicalProperties(storage.RegistryEntry):
             return self.name
 
     @property
-    def registry_name(self) -> str:
+    def registry_key(self) -> str:
         return self.name
 
 
@@ -369,7 +369,7 @@ class Mixture(object):
         object.__setattr__(self, 'components', sorted(self.components, key=lambda x: x.quantity, reverse=True))
 
     @property
-    def humid(self) -> bool:
+    def is_humid(self) -> bool:
         """ True if no component in the gas carries humidity.
 
         :return:
@@ -378,16 +378,16 @@ class Mixture(object):
 
     @property
     def humid_ratio(self) -> unit.Quantity:
-        ratio = 0
+        ratio = 0.0
 
         for component in self.components:
             if component.properties.humid:
                 ratio += component.quantity
 
-        return ratio
+        return unit.Quantity(ratio, unit.dimensionless).to(unit.registry.pct)
 
     @property
-    def inert(self) -> bool:
+    def is_inert(self) -> bool:
         """ True if all gases in mixture are inert.
 
         :return:

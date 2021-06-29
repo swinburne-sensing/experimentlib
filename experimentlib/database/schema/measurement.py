@@ -1,19 +1,13 @@
-import enum
+from enum import Enum
 
 
-class Direction(enum.Enum):
-    SOURCE = 'source'
-    SINK = 'sink'
+__all__ = ['Group']
 
 
-class Group(enum.Enum):
-    """ Definition for known types of hardware or measurements. """
-
-    # Raw data
-    RAW = 'raw'
+class Group(Enum):
+    """ Definition for known types of measurement. """
 
     # Metadata
-    LOG = 'log'
     EVENT = 'event'
     STATUS = 'status'
     SYSLOG = 'syslog'
@@ -21,20 +15,19 @@ class Group(enum.Enum):
     # Gas flow
     MFC = 'mfc'
 
-    # Gas concentration
+    # Calculated gas concentrations
     GAS = 'gas'
 
-    # Gas combustion
+    # Gas combustion measurements
     COMBUSTION = 'combust'
 
-    # Valve state
+    # Valves
     VALVE = 'valve'
 
     # Internal
     DEBUG = 'debug'
 
     # Motion
-    JERK = 'jerk'
     ACCELERATION = 'acceleration'
     VELOCITY = 'velocity'
     POSITION = 'position'
@@ -60,9 +53,8 @@ class Group(enum.Enum):
     # Environmental conditions
     TEMPERATURE = 'temperature'
     HUMIDITY = 'humidity'
-    PRESSURE = 'pressure'
 
-    # CV/CC power supply
+    # Power supply
     SUPPLY = 'supply'
 
     # Frequency
@@ -73,7 +65,3 @@ class Group(enum.Enum):
     TIME_DOMAIN_SAMPLE = 'timedomain'
     FREQUENCY_DOMAIN_SAMPLE = 'freqdomain'
     TIME_FREQUENCY_SAMPLE = 'tfdomain'
-
-    # Particle counts
-    PARTICLE_COUNT = 'pn'
-    PARTICLE_MASS = 'pm'

@@ -4,11 +4,13 @@ import socket
 import tempfile
 import time
 import typing
+from datetime import datetime, timedelta
 
 import yaml
 
-import experimentlib.logging.classes as classes
-import experimentlib.util.constant as constant
+from experimentlib.data import unit
+from experimentlib.logging import classes
+from experimentlib.util import args, classes as util_classes, constant
 
 
 class ExtendedError(yaml.YAMLError):
@@ -47,6 +49,10 @@ class IncludeTagError(ConstructorError):
     pass
 
 
+class ResolveTagError(ConstructorError):
+    pass
+
+
 class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
     """ An extended YAML loader including additional tags and security features. """
 
@@ -59,7 +65,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         **{'env_' + env_var: env_val for env_var, env_val in os.environ.items()}
     }
 
-    def __init__(self, stream: typing.Union[str, typing.IO],
+    def __init__(self, stream: typing.Union[str, typing.IO], enable_resolve: bool = False,
                  include_paths: typing.Optional[typing.Iterable[str]] = None):
         if type(stream) is not str:
             self._stream_root, stream_filename = os.path.split(stream.name)
@@ -69,6 +75,9 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
         classes.LoggedClass.__init__(self, f"src:{stream_filename}")
         yaml.SafeLoader.__init__(self, stream)
+
+        # Flag to allow resolving of objects
+        self._enable_resolve = enable_resolve
 
         # Restricted paths for include tag
         self._include_paths = []
@@ -120,18 +129,14 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
             raise FormatTagError('Unhandled exception', node) from exc
 
     @staticmethod
-    def construct_env_required(_, node: yaml.ScalarNode) -> str:
-        """ Construct string from environment variable specified in node.
+    def construct_datetime(_, node: yaml.ScalarNode) -> datetime:
+        """ Construct datetime from node string.
 
         :param _: unused
         :param node: YAML node
-        :return: environment variable content as string
-        :raises EnvironmentTagError: on undefined environment variable
+        :return: datetime
         """
-        if node.value not in os.environ:
-            raise EnvironmentTagError(f"\"{node.value}\" not defined")
-
-        return os.environ[node.value]
+        return args.parse_datetime(node.value)
 
     @staticmethod
     def construct_env(_, node: yaml.ScalarNode) -> typing.Optional[str]:
@@ -152,6 +157,20 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
                 raise EnvironmentTagError('Tag should only contain variable name and default value')
 
         return os.environ[node[0]]
+
+    @staticmethod
+    def construct_env_required(_, node: yaml.ScalarNode) -> str:
+        """ Construct string from environment variable specified in node.
+
+        :param _: unused
+        :param node: YAML node
+        :return: environment variable content as string
+        :raises EnvironmentTagError: on undefined environment variable
+        """
+        if node.value not in os.environ:
+            raise EnvironmentTagError(f"\"{node.value}\" not defined")
+
+        return os.environ[node.value]
 
     def construct_format(self, node: yaml.ScalarNode) -> str:
         """ Construct formatted string from node.
@@ -203,29 +222,51 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
             return include_data
 
+    def construct_resolve(self, node: yaml.ScalarNode) -> typing.Any:
+        """ Resolve tag to Python object from global scope.
+
+        :param node:
+        :return: anything
+        """
+        if not self._enable_resolve:
+            raise ResolveTagError('Resolve tags not enabled', node)
+
+        try:
+            return util_classes.resolve_global(node.value)
+        except Exception as exc:
+            raise ResolveTagError('Exception thrown while resolving node', node) from exc
+
+    def construct_timedelta(self, node) -> timedelta:
+        node_unit = unit.parse(node.value)
+
+        node_seconds = node_unit.m_as(unit.registry.sec)
+
+        return timedelta(seconds=node_seconds)
+
     @classmethod
-    def factory(cls, include_paths: typing.Iterable[str]):
+    def factory(cls, enable_resolve: bool = False, include_paths: typing.Optional[typing.Iterable[str]] = None):
         """ Get a wrapped constructor for ExtendedLoader with include paths restricted to the specified paths.
 
+        :param enable_resolve:
         :param include_paths: list of paths from which files may be included from
         :return: wrapped constructor
         """
         def f(stream):
-            return cls(stream, include_paths)
+            return cls(stream, enable_resolve, include_paths)
 
         return f
 
 
 # Add constructors
+ExtendedLoader.add_constructor('!datetime', ExtendedLoader.construct_datetime)
 ExtendedLoader.add_constructor('!envreq', ExtendedLoader.construct_env_required)
 ExtendedLoader.add_constructor('!env', ExtendedLoader.construct_env)
 ExtendedLoader.add_constructor('!format', ExtendedLoader.construct_format)
 ExtendedLoader.add_constructor('!include', ExtendedLoader.construct_include)
+ExtendedLoader.add_constructor('!resolve', ExtendedLoader.construct_resolve)
+ExtendedLoader.add_constructor('!timedelta', ExtendedLoader.construct_timedelta)
 
 
 # Wrapper for yaml.load using the extended loader
-def load(stream: typing.Union[str, typing.IO], include_paths: typing.Optional[typing.Iterable[str]] = None):
-    if include_paths:
-        return yaml.load(stream, ExtendedLoader.factory(include_paths))
-    else:
-        return yaml.load(stream, ExtendedLoader)
+def load(stream: typing.Union[str, typing.IO], *args, **kwargs):
+    return yaml.load(stream, ExtendedLoader.factory(*args, **kwargs))

@@ -2,8 +2,18 @@ import logging
 import logging.config
 import typing
 
-from .handlers import ColoramaStreamHandler
-from .levels import *
+from experimentlib.logging.handlers import ColoramaStreamHandler
+from experimentlib.logging.levels import *
+
+
+_SUPRESSED_LOGGERS = [
+    'aioinflux',
+    'matplotlib.font_manager',
+    'pymodbus',
+    'pyvisa',
+    'urllib3',
+    'urllib3.connectionpool'
+]
 
 
 class ExtendedLogger(logging.Logger):
@@ -43,6 +53,21 @@ class ExtendedLogger(logging.Logger):
         """
         if self.isEnabledFor(level):
             self._log(level, msg, args, **kwargs)
+
+    def comm(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs):
+        """ Log 'msg % args' with severity 'COMM'.
+
+        Useful for low-level communication logging, such as to external hardware.
+
+        :param msg: log message
+        :param args: message and additional arguments passed to _log
+        :param notify: True when this log should be forwarded to a user, False otherwise
+        :param event: True when this log should be recorded as an event, False otherwise
+        :param kwargs: additional keyword arguments passed to _log
+        """
+        if self.isEnabledFor(COMM):
+            self._update_kwargs(notify, event, kwargs)
+            self._log(COMM, msg, args, **kwargs)
 
     def trace(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs):
         """ Log 'msg % args' with severity 'TRACE'.
@@ -139,15 +164,26 @@ def get_logger(name: typing.Optional[str] = None) -> ExtendedLogger:
     return logger
 
 
-def basic_logging(**kwargs) -> None:
+def basic_logging(supress_suggested: bool = True, **kwargs) -> None:
     """ Wrapper for standard basic logging that uses a colourised console stream by default.
 
+    :param supress_suggested: if True some recommended loggers will be raised to the INFO level to reduce log spam
     :param kwargs: keyword arguments passed to logging.basicConfig
     """
     if 'handlers' not in kwargs:
         kwargs['handlers'] = [ColoramaStreamHandler()]
 
+    if 'format' not in kwargs:
+        kwargs['format'] = '%(asctime)s.%(msecs)03d [%(levelname).1s] %(name)s: %(message)s'
+
+    if 'datefmt' not in kwargs:
+        kwargs['datefmt'] = '%y%m%d %H:%M:%S'
+
     logging.basicConfig(**kwargs)
+
+    if supress_suggested:
+        for logger_name in _SUPRESSED_LOGGERS:
+            logging.getLogger(logger_name).setLevel(INFO)
 
 
 def dict_config(config: typing.Dict[str, typing.Any]) -> None:

@@ -12,6 +12,7 @@ import sys
 import time
 import typing
 
+from logging import Formatter
 # noinspection PyUnresolvedReferences
 from logging.config import ConvertingDict, ConvertingList, valid_ident
 
@@ -21,7 +22,8 @@ import pushover
 import ratelimit
 import tenacity
 
-from . import filters, formatters, levels
+from experimentlib.database.schema.measurement import Group
+from experimentlib.logging import filters, formatters, levels
 
 
 def _resolve_converting_dict(convert_dict: ConvertingDict) -> typing.Dict:
@@ -102,7 +104,7 @@ class BufferedHandler(logging.Handler):
 
 class ColoramaStreamHandler(logging.StreamHandler):
     """ Colourised stream handler. """
-    color_map: typing.Optional[typing.Mapping[int, int]] = {
+    DEFAULT_COLOR_MAP: typing.Optional[typing.Mapping[int, int]] = {
         levels.META: colorama.Fore.LIGHTBLUE_EX,
         levels.LOCK: colorama.Style.BRIGHT + colorama.Fore.LIGHTBLACK_EX,
         levels.TRACE: colorama.Style.BRIGHT + colorama.Fore.LIGHTBLACK_EX,
@@ -121,8 +123,7 @@ class ColoramaStreamHandler(logging.StreamHandler):
 
         super().__init__(colorama.AnsiToWin32(stream).stream)
 
-        if color_map is not None:
-            self.color_map = color_map
+        self.color_map = color_map or self.DEFAULT_COLOR_MAP
 
     @property
     def is_tty(self):
@@ -131,8 +132,8 @@ class ColoramaStreamHandler(logging.StreamHandler):
 
         return isatty and isatty()
 
-    def format(self, record):
-        message = super().format(record)
+    def format(self, record: logging.LogRecord):
+        message = super(ColoramaStreamHandler, self).format(record)
 
         if self.is_tty:
             message = '\n'.join((self.colorize(line, record) for line in message.split('\n')))
@@ -190,14 +191,17 @@ class InfluxDBHandler(logging.Handler):
     }
 
     def __init__(self, name: str, level: int = logging.NOTSET,
-                 client_args: typing.Optional[typing.Mapping[str, typing.Any]] = None, measurement: str = 'syslog',
-                 severity_map: typing.Dict[int, typing.Union[int, Severity]] = None):
+                 client_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
+                 measurement: typing.Optional[str] = None,
+                 severity_map: typing.Dict[int, typing.Union[int, Severity]] = None,
+                 rp_map: typing.Optional[typing.Mapping[str, typing.Any]] = None):
         """
 
         :param name:
+        :param level:
         :param client_args:
         :param severity_map:
-        :param level:
+        :param rp_map:
         """
         # Discard records from urllib3 to prevent recursion
         super(InfluxDBHandler, self).__init__(level)
@@ -208,19 +212,27 @@ class InfluxDBHandler(logging.Handler):
         # Force formatter
         self.setFormatter(formatters.InfluxDBFormatter())
 
-        self._measurement = measurement
+        self._measurement = measurement or Group.SYSLOG
 
         # Parse integers in input mapping
+        self._severity_map: typing.Dict[int, InfluxDBHandler.Severity] = {}
+
         if severity_map is not None:
             for k, v in severity_map.items():
                 if isinstance(v, int):
-                    severity_map[k] = InfluxDBHandler.Severity(v)
+                    self._severity_map[k] = InfluxDBHandler.Severity(v)
+        else:
+            self._severity_map = self._DEFAULT_SEVERITY_MAP
 
-        self._severity_map = severity_map or self._DEFAULT_SEVERITY_MAP
+        # Parse levels in RP mapping
+        self._rp_map: typing.Dict[int, str] = {}
 
-        # Minimum and maximum supported priority
-        self._severity_min = min(self._severity_map.keys())
-        self._severity_max = min(self._severity_map.keys())
+        if rp_map is not None:
+            for k, v in rp_map.items():
+                self._rp_map[getattr(levels, k)] = v
+
+        self._rp_min = min(self._rp_map.keys())
+        self._rp_max = max(self._rp_map.keys())
 
         # Create shared tags dict
         self._tags = {
@@ -238,12 +250,19 @@ class InfluxDBHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         # Determine closest mappable severity level
-        level = record.levelno
+        severity_level = record.levelno
 
-        if level not in self._severity_map:
-            level = min(self._severity_map.keys(), key=lambda x: abs(x - level))
+        if severity_level not in self._severity_map:
+            severity_level = min(self._severity_map.keys(), key=lambda x: abs(x - severity_level))
 
-        severity = self._severity_map[level]
+        severity = self._severity_map[severity_level]
+
+        if self._rp_min <= record.levelno <= self._rp_max:
+            # Find closest retention policy in map
+            rp = self._rp_map[min(self._rp_map.keys(), key=lambda x: abs(x - record.levelno))]
+        else:
+            # Use default retention policy
+            rp = None
 
         payload = {
             'measurement': self._measurement,
@@ -281,7 +300,7 @@ class InfluxDBHandler(logging.Handler):
         # Append shared tags
         payload['tags'].update(self._tags)
 
-        self._client.write_points([payload], 'n')
+        self._client.write_points([payload], 'n', retention_policy=rp)
 
 
 class PushoverHandler(logging.Handler):

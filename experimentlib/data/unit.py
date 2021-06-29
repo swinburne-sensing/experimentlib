@@ -1,6 +1,12 @@
 import typing
+from datetime import timedelta
 
 import pint
+
+try:
+    import pint_pandas
+except ImportError:
+    pint_pandas = None
 
 
 class QuantityParseError(Exception):
@@ -15,8 +21,14 @@ def _handle_percent(x):
 # Unit registry
 registry = pint.UnitRegistry(autoconvert_offset_to_baseunit=True, preprocessors=[_handle_percent])
 
+# Hack to make Quantity objects pickable
+class Quantity(pint.quantity._Quantity):
+    _REGISTRY = registry
+
+registry.Quantity = Quantity
+
 # Shorthand
-Quantity = registry.Quantity
+# Quantity = registry.Quantity
 Unit = registry.Unit
 
 # Change default printing format
@@ -28,12 +40,23 @@ registry.define('ppm = count / 1e6')
 registry.define('ppb = count / 1e9')
 
 registry.define('standard_cubic_centimeter_per_minute = cm ** 3 / min = sccm')
+registry.define('cubic_centimeter_per_minute = cm ** 3 / min = ccm')
+
+# Add aliases
+registry.define('@alias psi = PSI')
+
+# registry.define('litre_per_minute = l / min = lpm')
 
 # Shortcuts for dimensionless quantities
 dimensionless = registry.dimensionless
 
 # Handle pickle/unpickling by overwriting the built-in unit registry
 pint.set_application_registry(registry)
+
+# Setup pint arrays
+if pint_pandas:
+    PintArray = pint_pandas.PintArray
+    pint_pandas.PintType.ureg = registry
 
 
 # Decorate Quantity formatter to catch printing percent
@@ -88,8 +111,18 @@ TYPE_PARSE_VALUE = typing.Union[Quantity, str, float, int]
 TYPE_PARSE_UNIT = typing.Union[Unit, str]
 
 
+def parse_unit(x: TYPE_PARSE_UNIT) -> Unit:
+    if isinstance(x, Unit):
+        return x
+
+    if hasattr(registry, x):
+        return getattr(registry, x)
+
+    raise QuantityParseError(f"Unknown unit \"{x}\"")
+
+
 def parse(x: TYPE_PARSE_VALUE, to_unit: typing.Optional[TYPE_PARSE_UNIT] = None) -> Quantity:
-    """ Parse input to a Quantity of specified unit.
+    """ Parse arbitrary input to a Quantity of specified unit.
 
     :param x: input str, number or Quantity
     :param to_unit: str or Unit to convert parsed values to
@@ -97,7 +130,7 @@ def parse(x: TYPE_PARSE_VALUE, to_unit: typing.Optional[TYPE_PARSE_UNIT] = None)
     """
     # Parse unit if provided as string
     if isinstance(to_unit, str):
-        to_unit = registry[to_unit].units
+        to_unit = parse_unit(to_unit)
 
     if not isinstance(x, Quantity):
         # Convert int to float
@@ -121,6 +154,26 @@ def parse(x: TYPE_PARSE_VALUE, to_unit: typing.Optional[TYPE_PARSE_UNIT] = None)
             x = Quantity(x.m_as('dimensionless'), to_unit)
 
     return x
+
+
+def parse_magnitude(x: TYPE_PARSE_VALUE, magnitude_unit: TYPE_PARSE_UNIT,
+                    parse_unit: typing.Optional[TYPE_PARSE_UNIT] = None) -> float:
+    if isinstance(magnitude_unit, str):
+        magnitude_unit = parse_unit(magnitude_unit)
+
+    if parse_unit is None:
+        # Assume parsing unit is same as casting unit
+        parse_unit = magnitude_unit
+
+    return parse(x, parse_unit).m_as(magnitude_unit)
+
+
+def parse_timedelta(x: TYPE_PARSE_VALUE) -> timedelta:
+    x_unit = parse(x)
+
+    x_secs = x_unit.m_as(registry.sec)
+
+    return timedelta(seconds=x_secs)
 
 
 def converter(to_unit: TYPE_PARSE_UNIT) -> typing.Callable[[TYPE_PARSE_VALUE], Quantity]:

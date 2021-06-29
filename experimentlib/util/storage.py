@@ -7,7 +7,7 @@ class RegistryEntry(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def registry_name(self) -> str:
+    def registry_key(self) -> str:
         """ Get the unique identifier for this object when placed in a Registry. Must be a valid Python attribute name
         (ie. no special characters except '_', preferably lower case).
 
@@ -35,24 +35,27 @@ class Registry(typing.Generic[T]):
             self.register(item)
 
     def __contains__(self, item):
-        return self.registry_str(item) in self._registry
+        return self._safe_key(item) in self._registry
 
     def __getitem__(self, item):
-        return self._registry[self.registry_str(item)]
+        return self._registry[self._safe_key(item)]
 
     def __getattr__(self, item):
         return self[item]
+
+    def __iter__(self):
+        return iter(self._registry.values())
 
     def register(self, item: T) -> None:
         """ Register an instance with the Registry.
 
         :param item:
         """
-        self._registry[self.registry_str(item.registry_name)] = item
+        self._registry[self._safe_key(item.registry_key)] = item
 
     @classmethod
-    def registry_str(cls, x: typing.Any) -> str:
-        """ Generate a compatible key from an arbitrary input.
+    def _safe_key(cls, x: typing.Any) -> str:
+        """ Generate a safe key from arbitrary input.
 
         :param x: input
         :return: Registry compatible key

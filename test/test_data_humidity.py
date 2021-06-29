@@ -3,7 +3,7 @@ import unittest
 from experimentlib.data import humidity, unit
 
 
-class DataHumidityTest(unittest.TestCase):
+class TestDataHumidity(unittest.TestCase):
     def test_rel_to_abs(self):
         rel_humid = unit.parse('100%')
         temp = unit.parse('30 degC')

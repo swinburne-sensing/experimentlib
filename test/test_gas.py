@@ -3,7 +3,7 @@ import unittest
 from experimentlib.data import gas, unit
 
 
-class MyTestCase(unittest.TestCase):
+class TestDataGas(unittest.TestCase):
     def test_mix(self):
         gas_parse_a = gas.Mixture.from_str('1% hydrogen, air')
         gas_parse_b = gas.Mixture.from_str('1% methane, air')

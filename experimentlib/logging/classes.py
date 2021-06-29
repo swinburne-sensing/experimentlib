@@ -1,11 +1,11 @@
-import abc
 import typing
+from abc import ABCMeta, abstractmethod
 
 from experimentlib import logging
-from experimentlib.util import classes
+from experimentlib.util.classes import HybridMethod
 
 
-class LoggedMetaclass(abc.ABCMeta):
+class LoggedMetaclass(ABCMeta):
     """ Metaclass that creates a logger instance for all classes derived from  """
 
     def __new__(mcs, *args, logger_name: typing.Optional[str] = None, **kwargs):
@@ -18,7 +18,14 @@ class LoggedMetaclass(abc.ABCMeta):
         return x
 
 
-class LoggedClass(object, metaclass=LoggedMetaclass):
+class LoggedInterface(metaclass=ABCMeta):
+    @abstractmethod
+    @HybridMethod
+    def logger(self) -> logging.ExtendedLogger:
+        pass
+
+
+class LoggedClass(LoggedInterface):
     def __init__(self, logger_instance_name: typing.Optional[str] = None):
         """ Base class that contains a logger attached to both the class definition (allowing use in class or static
         methods) and to class instances. An optional string can be appended to the logger name.
@@ -27,7 +34,7 @@ class LoggedClass(object, metaclass=LoggedMetaclass):
         """
         self._obj_logger = logging.get_logger(self.__class__.__name__ + '_' + (logger_instance_name or 'obj'))
 
-    @classes.HybridMethod
+    @HybridMethod
     def logger(self) -> logging.ExtendedLogger:
         """ Get reference to the logger attached to either this object (if called as an instance method) or class (if
         called as a class method).

@@ -63,3 +63,25 @@ def instance_from_dict(config: typing.Dict[str, typing.Any], parent: typing.Any)
         return reference_from_str(method_name, parent)
     else:
         raise InstanceError('Configuration dictionary requires either "class" or "method" key')
+
+
+def resolve_global(name: str):
+    # Split name
+    name = name.split('.')
+
+    # Find root object
+    obj_name = name.pop(0)
+    obj = __import__(obj_name)
+
+    while len(name) > 0:
+        attr_name = name.pop(0)
+        obj_name = obj_name + '.' + attr_name
+
+        try:
+            obj = getattr(obj, attr_name)
+        except AttributeError as exc:
+            # Attempt to import module if not already imported
+            __import__(obj_name)
+            obj = getattr(obj, attr_name)
+
+    return obj

@@ -3,7 +3,7 @@ import unittest
 from experimentlib.data import unit
 
 
-class DataUnitTest(unittest.TestCase):
+class TestDataUnit(unittest.TestCase):
     def test_parsing_str(self):
         test_qty = unit.parse('100 degC', 'kelvin')
 
