@@ -11,28 +11,29 @@ class LoggedMetaclass(ABCMeta):
     def __new__(mcs, *args, logger_name: typing.Optional[str] = None, **kwargs):
         x = super(LoggedMetaclass, mcs).__new__(mcs, *args, **kwargs)
 
-        # Assign class logger is none exists
-        x._cls_logger = logging.get_logger(args[0] + '_cls')
-        x._cls_logger.log(logging.META, 'Created')
+        # Assign class logger
+        x._logged_cls = logging.get_logger(args[0] + '_cls')
+        x._logged_cls.log(logging.META, 'Created')
 
         return x
 
 
-class LoggedInterface(metaclass=ABCMeta):
+class LoggedInterface(metaclass=LoggedMetaclass):
     @abstractmethod
     @HybridMethod
     def logger(self) -> logging.ExtendedLogger:
         pass
 
 
-class LoggedClass(LoggedInterface):
+class LoggedClass(LoggedInterface, metaclass=LoggedMetaclass):
     def __init__(self, logger_instance_name: typing.Optional[str] = None):
         """ Base class that contains a logger attached to both the class definition (allowing use in class or static
         methods) and to class instances. An optional string can be appended to the logger name.
 
         :param logger_instance_name: optional string to append to logger name
         """
-        self._obj_logger = logging.get_logger(self.__class__.__name__ + '_' + (logger_instance_name or 'obj'))
+        self._logged_obj = logging.get_logger(self.__class__.__name__ + '_' + (logger_instance_name or 'obj'))
+        self._logged_obj.meta('Created')
 
     @HybridMethod
     def logger(self) -> logging.ExtendedLogger:
@@ -42,6 +43,6 @@ class LoggedClass(LoggedInterface):
         :return: class or instance ExtendedLogger
         """
         if issubclass(self.__class__, LoggedClass):
-            return self._obj_logger
+            return self._logged_obj
         else:
-            return self._cls_logger
+            return self._logged_cls

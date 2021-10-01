@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import collections
 import enum
 import json
 import logging
@@ -11,18 +12,16 @@ import socket
 import sys
 import time
 import typing
-
-from logging import Formatter
 # noinspection PyUnresolvedReferences
 from logging.config import ConvertingDict, ConvertingList, valid_ident
 
 import colorama
-import influxdb
+import influxdb_client
 import pushover
-import ratelimit
 import tenacity
+import urllib3
+from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
 
-from experimentlib.database.schema.measurement import Group
 from experimentlib.logging import filters, formatters, levels
 
 
@@ -148,10 +147,14 @@ class ColoramaStreamHandler(logging.StreamHandler):
 
 
 class InfluxDBHandler(logging.Handler):
+    # HTTP options
+    RETRY = urllib3.Retry(redirect=3, backoff_factor=1)
+
     # Log keywords (syslog compatible)
     FACILITY_CODE = 14
     FACILITY = 'console'
 
+    # Map logging levels to syslog severity levels
     class Severity(enum.IntEnum):
         EMERGENCY = 0
         ALERT = 1
@@ -181,7 +184,6 @@ class InfluxDBHandler(logging.Handler):
             else:
                 return 'debug'
 
-    # Map logging levels to syslog severity levels
     _DEFAULT_SEVERITY_MAP: typing.Mapping[int, InfluxDBHandler.Severity] = {
         logging.DEBUG: Severity.DEBUG,
         logging.INFO: Severity.INFORMATIONAL,
@@ -190,31 +192,37 @@ class InfluxDBHandler(logging.Handler):
         logging.CRITICAL: Severity.CRITICAL
     }
 
-    def __init__(self, name: str, level: int = logging.NOTSET,
-                 client_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
+    def __init__(self, name: str, bucket: typing.Union[str, typing.Mapping[int, str]],
+                 client_args: typing.Mapping[str, typing.Any] = None, level: int = logging.NOTSET,
                  measurement: typing.Optional[str] = None,
-                 severity_map: typing.Dict[int, typing.Union[int, Severity]] = None,
-                 rp_map: typing.Optional[typing.Mapping[str, typing.Any]] = None):
-        """
+                 severity_map: typing.Dict[int, typing.Union[int, Severity]] = None):
+        """ Sends logs to an InfluxDB instance in a format compatible with InfluxDBs log view. Can be configured to
+        alter severity levels and send different log levels to specific buckets, allowing culling of old records.
 
-        :param name:
-        :param level:
+        :param name: application name to append to logs
+        :param bucket: target bucket or mapping of log levels to buckets
         :param client_args:
+        :param level: minimum logging level
+        :param measurement: measurement name, defaults to 'syslog'
         :param severity_map:
-        :param rp_map:
         """
-        # Discard records from urllib3 to prevent recursion
-        super(InfluxDBHandler, self).__init__(level)
+        logging.Handler.__init__(self, level)
 
         # Discard records from urllib3 to prevent recursion
         self.addFilter(filters.discard_name_prefix_factory('urllib3.'))
 
-        # Force formatter
-        self.setFormatter(formatters.InfluxDBFormatter())
+        self._measurement = measurement or 'syslog'
 
-        self._measurement = measurement or Group.SYSLOG
+        # Setup bucket mapping
+        self._bucket_map: typing.Dict[int, str] = {}
 
-        # Parse integers in input mapping
+        if isinstance(bucket, collections.Mapping):
+            for k, v in bucket.items():
+                self._bucket_map[getattr(levels, k)] = v
+        else:
+            self._bucket_map[logging.NOTSET] = str(bucket)
+
+        # Setup severity mapping
         self._severity_map: typing.Dict[int, InfluxDBHandler.Severity] = {}
 
         if severity_map is not None:
@@ -224,29 +232,27 @@ class InfluxDBHandler(logging.Handler):
         else:
             self._severity_map = self._DEFAULT_SEVERITY_MAP
 
-        # Parse levels in RP mapping
-        self._rp_map: typing.Dict[int, str] = {}
+        self._bucket_min = min(self._bucket_map.keys())
+        self._bucket_max = max(self._bucket_map.keys())
 
-        if rp_map is not None:
-            for k, v in rp_map.items():
-                self._rp_map[getattr(levels, k)] = v
-
-        self._rp_min = min(self._rp_map.keys())
-        self._rp_max = max(self._rp_map.keys())
-
-        # Create shared tags dict
-        self._tags = {
-            'appname': name,
-            'facility': self.FACILITY,
-            'host': socket.gethostname(),
-            'hostname': socket.getfqdn(),
-        }
+        # Create tags common to all records
+        self._point_settings = PointSettings(
+            appname=name,
+            facility=self.FACILITY,
+            host=socket.gethostname(),
+            hostname=socket.getfqdn()
+        )
 
         # Instantiate client and test connection
-        client_args = client_args or {}
-        self._client = influxdb.InfluxDBClient(**client_args)
+        self._client = influxdb_client.InfluxDBClient(**client_args, retries=self.RETRY)
 
-        self._client.ping()
+    def __del__(self):
+        # Ensure client is closed on deletion
+        if hasattr(self, '_client') and self._client is not None:
+            self._client.close()
+
+    def setFormatter(self, fmt: logging.Formatter) -> None:
+        raise NotImplementedError('Formatter cannot be changed')
 
     def emit(self, record: logging.LogRecord) -> None:
         # Determine closest mappable severity level
@@ -257,12 +263,8 @@ class InfluxDBHandler(logging.Handler):
 
         severity = self._severity_map[severity_level]
 
-        if self._rp_min <= record.levelno <= self._rp_max:
-            # Find closest retention policy in map
-            rp = self._rp_map[min(self._rp_map.keys(), key=lambda x: abs(x - record.levelno))]
-        else:
-            # Use default retention policy
-            rp = None
+        # Find closest bucket in map
+        bucket = self._bucket_map[min(self._bucket_map.keys(), key=lambda x: abs(x - record.levelno))]
 
         payload = {
             'measurement': self._measurement,
@@ -297,10 +299,9 @@ class InfluxDBHandler(logging.Handler):
             'time': int(record.created * 1e9)
         }
 
-        # Append shared tags
-        payload['tags'].update(self._tags)
-
-        self._client.write_points([payload], 'n', retention_policy=rp)
+        # Write point
+        with self._client.write_api(ASYNCHRONOUS, self._point_settings) as write_api:
+            write_api.write(bucket, influxdb_client.Point.from_dict(payload), influxdb_client.WritePrecision.NS)
 
 
 class PushoverHandler(logging.Handler):
@@ -382,6 +383,9 @@ class PushoverHandler(logging.Handler):
         # Verify user key (does not verify API key)
         # self._client.verify()
 
+    def setFormatter(self, fmt: logging.Formatter) -> None:
+        raise NotImplementedError('Formatter cannot be changed')
+
     def emit(self, record: logging.LogRecord) -> None:
         # Format record
         msg = self.format(record)
@@ -403,8 +407,6 @@ class PushoverHandler(logging.Handler):
 
     @tenacity.retry(retry=_RetryPushoverError(), stop=tenacity.stop_after_delay(600),
                     wait=tenacity.wait_fixed(30))
-    @ratelimit.sleep_and_retry
-    @ratelimit.limits(calls=1, period=2)
     def _send_message(self, msg: str, priority: int, title: str, timestamp: int, html: bool):
         self._client.send_message(msg, priority=priority, title=title, timestamp=timestamp, html=int(html))
 
@@ -424,7 +426,7 @@ class QueueListenerHandler(logging.handlers.QueueHandler):
         if isinstance(handlers, ConvertingList):
             handlers = _resolve_converting_list(handlers)
 
-        super().__init__(queue)
+        logging.handlers.QueueHandler.__init__(self, queue)
 
         # Create listener thread
         # noinspection PyUnresolvedReferences

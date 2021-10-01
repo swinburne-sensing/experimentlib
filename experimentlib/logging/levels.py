@@ -14,10 +14,14 @@ CRITICAL = logging.CRITICAL
 
 
 # Additional logging levels
-logging.META = logging.DEBUG - 4
-logging.LOCK = logging.DEBUG - 3
-logging.TRACE = logging.DEBUG - 2
-logging.COMM = logging.DEBUG - 1
+# Logging about logging
+logging.META = logging.NOTSET + 1
+# Logging lock acquisition/release
+logging.LOCK = logging.DEBUG - 2
+# Logging for detailed debugging
+logging.TRACE = logging.DEBUG - 1
+# Logging external I/O
+logging.COMM = logging.DEBUG + 1
 
 logging.addLevelName(logging.META, 'META')
 logging.addLevelName(logging.LOCK, 'LOCKS')

@@ -18,6 +18,7 @@ _RE_PAIR_ASSIGN = re.compile(r'^\s*([\"\w\d_]+)\s*:\s*([^,\r\n]+)[\s,]*$')
 _RE_OBJ_ASSIGN = re.compile(r'^\s*([\w]+)\.([\w\d\[\]]*)\s+=\s+([^;]+);$')
 _RE_VAR_ASSIGN = re.compile(r'\s*var\s+(\w+)\s+=\s+([^;]+);', re.MULTILINE)
 
+
 @attr.s(frozen=True)
 class JavascriptMapping(object):
     name: str = attr.ib()

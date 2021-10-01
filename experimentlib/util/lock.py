@@ -1,10 +1,14 @@
+import contextlib
 import threading
+import time
 import typing
+from datetime import datetime
 
+from experimentlib.data import unit
 from experimentlib.logging import classes
 
 
-class LoggedThreadLock(classes.LoggedClass):
+class LoggedThreadLock(classes.LoggedClass, contextlib.AbstractContextManager):
     def __init__(self, name: typing.Optional[str] = None, reenterant: bool = True):
         super(LoggedThreadLock, self).__init__(name)
 
@@ -63,7 +67,9 @@ class LoggedThreadLock(classes.LoggedClass):
         return state
 
     def __enter__(self):
-        return self.acquire()
+        self.acquire()
+
+        return self
 
     def release(self) -> None:
         self._lock.release()
@@ -81,3 +87,44 @@ class LoggedThreadLock(classes.LoggedClass):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()
+
+
+class IntervalLock(classes.LoggedClass):
+    def __init__(self, name: typing.Optional[str] = None):
+        super(IntervalLock, self).__init__(name)
+
+        self._interval_timeout: typing.Optional[datetime] = None
+
+        if name is not None:
+            name += '_internal'
+
+        self._lock = LoggedThreadLock(name, False)
+
+    @contextlib.contextmanager
+    def interval(self, minimum_delay: typing.Optional[unit.TYPE_PARSE_VALUE]):
+        if minimum_delay is not None:
+            minimum_delay = unit.parse_timedelta(minimum_delay)
+
+        self._lock.acquire()
+
+        if self._interval_timeout is not None:
+            wait_time = self._interval_timeout - datetime.now()
+
+            if wait_time.total_seconds() > 0:
+                self.logger().lock(f"Waiting {wait_time}")
+                time.sleep(wait_time.total_seconds())
+                self._interval_timeout = None
+
+        try:
+            yield
+        finally:
+            # Save exit time
+            if minimum_delay is not None:
+                self._interval_timeout = datetime.now() + minimum_delay
+
+            self._lock.release()
+
+    def reset(self):
+        with self._lock:
+            self._interval_timeout = None
+            self.logger().lock('Interval reset')

@@ -79,7 +79,7 @@ def resolve_global(name: str):
 
         try:
             obj = getattr(obj, attr_name)
-        except AttributeError as exc:
+        except AttributeError:
             # Attempt to import module if not already imported
             __import__(obj_name)
             obj = getattr(obj, attr_name)

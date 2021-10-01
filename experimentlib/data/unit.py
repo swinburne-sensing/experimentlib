@@ -1,3 +1,4 @@
+import functools
 import typing
 from datetime import timedelta
 
@@ -21,9 +22,12 @@ def _handle_percent(x):
 # Unit registry
 registry = pint.UnitRegistry(autoconvert_offset_to_baseunit=True, preprocessors=[_handle_percent])
 
-# Hack to make Quantity objects pickable
+
+# Hack to make Quantity objects pickable by fixing implementation used in registry
+# noinspection PyProtectedMember
 class Quantity(pint.quantity._Quantity):
     _REGISTRY = registry
+
 
 registry.Quantity = Quantity
 
@@ -41,11 +45,13 @@ registry.define('ppb = count / 1e9')
 
 registry.define('standard_cubic_centimeter_per_minute = cm ** 3 / min = sccm')
 registry.define('cubic_centimeter_per_minute = cm ** 3 / min = ccm')
+# registry.define('litre_per_minute = l / min = lpm')
 
 # Add aliases
 registry.define('@alias psi = PSI')
-
-# registry.define('litre_per_minute = l / min = lpm')
+registry.define('@alias ccm = CCM')
+registry.define('@alias sccm = SCCM')
+# registry.define('@alias m ** 3 = m3/d')
 
 # Shortcuts for dimensionless quantities
 dimensionless = registry.dimensionless
@@ -54,13 +60,15 @@ dimensionless = registry.dimensionless
 pint.set_application_registry(registry)
 
 # Setup pint arrays
-if pint_pandas:
+if pint_pandas is not None:
+    # noinspection PyUnresolvedReferences
     PintArray = pint_pandas.PintArray
+    # noinspection PyUnresolvedReferences
     pint_pandas.PintType.ureg = registry
 
 
-# Decorate Quantity formatter to catch printing percent
-def _format_decorator(format_method):
+# Decorate Quantity formatter to catch printing dimensionless units
+def _quantity_format_decorator(format_method):
     def format_decorator(self, spec):
         spec = spec or self.default_format
 
@@ -103,17 +111,40 @@ def _format_decorator(format_method):
     return format_decorator
 
 
-Quantity.__format__ = _format_decorator(Quantity.__format__)
+def _unit_format_decorator(format_method):
+    def format_decorator(self, spec):
+        unit_str = format_method(self, spec)
+
+        if unit_str.endswith('pct'):
+            return '%'
+
+        return unit_str
+
+    return format_decorator
+
+
+Quantity.__format__ = _quantity_format_decorator(Quantity.__format__)
+Unit.__format__ = _unit_format_decorator(Unit.__format__)
 
 
 # Type hints
 TYPE_PARSE_VALUE = typing.Union[Quantity, str, float, int]
-TYPE_PARSE_UNIT = typing.Union[Unit, str]
+TYPE_PARSE_UNIT = typing.Union[Unit, Quantity, str]
 
 
 def parse_unit(x: TYPE_PARSE_UNIT) -> Unit:
+    """ Parse arbitrary input to a Unit from the registry.
+
+    :param x: input str
+    :return: Unit
+    """
     if isinstance(x, Unit):
+        # Already a Unit
         return x
+
+    if isinstance(x, Quantity):
+        # Extract Unit, can sometimes occur when using values from pint
+        return x.units
 
     if hasattr(registry, x):
         return getattr(registry, x)
@@ -128,9 +159,8 @@ def parse(x: TYPE_PARSE_VALUE, to_unit: typing.Optional[TYPE_PARSE_UNIT] = None)
     :param to_unit: str or Unit to convert parsed values to
     :return: Quantity with parsed magnitude and specified unit
     """
-    # Parse unit if provided as string
-    if isinstance(to_unit, str):
-        to_unit = parse_unit(to_unit)
+    # Parse unit
+    to_unit = parse_unit(to_unit)
 
     if not isinstance(x, Quantity):
         # Convert int to float
@@ -151,53 +181,93 @@ def parse(x: TYPE_PARSE_VALUE, to_unit: typing.Optional[TYPE_PARSE_UNIT] = None)
             except pint.errors.DimensionalityError as ex:
                 raise QuantityParseError(f"Unable to convert quantity {x!s} to unit {to_unit}") from ex
         else:
-            x = Quantity(x.m_as('dimensionless'), to_unit)
+            x = Quantity(x.m_as(dimensionless), to_unit)
 
     return x
 
 
 def parse_magnitude(x: TYPE_PARSE_VALUE, magnitude_unit: TYPE_PARSE_UNIT,
-                    parse_unit: typing.Optional[TYPE_PARSE_UNIT] = None) -> float:
-    if isinstance(magnitude_unit, str):
-        magnitude_unit = parse_unit(magnitude_unit)
+                    input_unit: typing.Optional[TYPE_PARSE_UNIT] = None) -> float:
+    """ Shortcut method to parse as value, optionally converting to specified unit before returning the magnitude.
 
-    if parse_unit is None:
-        # Assume parsing unit is same as casting unit
-        parse_unit = magnitude_unit
+    :param x: input str, number or Quantity
+    :param magnitude_unit: str or Unit to convert parsed values to before conversion to magnitude
+    :param input_unit: str or Unit to convert parsed values to
+    :return:
+    """
+    magnitude_unit = parse_unit(magnitude_unit)
 
-    return parse(x, parse_unit).m_as(magnitude_unit)
+    if input_unit is None:
+        # Assume default parsing unit is same as casting unit
+        input_unit = magnitude_unit
+
+    return parse(x, input_unit).m_as(magnitude_unit)
 
 
 def parse_timedelta(x: TYPE_PARSE_VALUE) -> timedelta:
+    """
+
+    :param x:
+    :return:
+    """
     x_unit = parse(x)
+
+    if x_unit.dimensionless:
+        # Assume seconds by default
+        x_unit = Quantity(x_unit.m_as(dimensionless), registry.sec)
 
     x_secs = x_unit.m_as(registry.sec)
 
     return timedelta(seconds=x_secs)
 
 
-def converter(to_unit: TYPE_PARSE_UNIT) -> typing.Callable[[TYPE_PARSE_VALUE], Quantity]:
-    """ Create wrapper for parse method with a pre-defined unit. Useful with the attrs library.
+def converter(to_unit: typing.Optional[TYPE_PARSE_UNIT] = None,
+              optional: bool = False) -> typing.Callable[[TYPE_PARSE_VALUE], Quantity]:
+    """ Create wrapper for parse decorator with a pre-defined unit. Useful with the attrs library.
 
-    :param to_unit:
+    :param to_unit: str or Unit to convert values to, defaults to unitless
+    :param optional: if False
     :return:
     """
+    to_unit = to_unit or registry.dimensionless
+
     def f(x: TYPE_PARSE_VALUE):
-        return parse(x, to_unit)
-
-    return f
-
-
-def converter_optional(to_unit: TYPE_PARSE_UNIT) -> typing.Callable[[typing.Optional[TYPE_PARSE_VALUE]], Quantity]:
-    """ Create wrapper for parse method with a pre-defined unit. Useful with the attrs library.
-
-    :param to_unit:
-    :return:
-    """
-    def f(x: typing.Optional[TYPE_PARSE_VALUE]):
         if x is None:
+            if not optional:
+                raise QuantityParseError('Input to converter cannot be None')
+
             return None
 
         return parse(x, to_unit)
 
     return f
+
+
+def return_converter(to_unit: TYPE_PARSE_UNIT, allow_none: bool = False):
+    """ Decorator to convert returned result to a Quantity.
+
+    :param to_unit:
+    :param allow_none:
+    :return:
+    """
+    to_unit = parse_unit(to_unit)
+
+    def wrapper_decorator(func):
+        @functools.wraps(func)
+        def wrapper_result(*args, **kwargs):
+            result = func(*args, **kwargs)
+
+            if result is None:
+                if not allow_none:
+                    raise ValueError('Expected numeric result')
+
+                return None
+
+            if not isinstance(result, Quantity):
+                raise ValueError(f"Decorated method returned {type(result)}, expected Quantity")
+
+            return result.to(to_unit)
+
+        return wrapper_result
+
+    return wrapper_decorator

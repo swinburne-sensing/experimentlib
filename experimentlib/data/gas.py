@@ -47,9 +47,6 @@ class MolecularStructure(enum.Enum):
 
 @attr.s(frozen=True)
 class ChemicalProperties(storage.RegistryEntry):
-    UNIT_DENSITY = unit.registry.g / unit.registry.L
-    UNIT_SPECIFIC_HEAT = unit.registry.cal / unit.registry.g
-
     # Gas name
     name: str = attr.ib()
 
@@ -57,10 +54,11 @@ class ChemicalProperties(storage.RegistryEntry):
     symbol: Optional[str] = attr.ib(default=None)
 
     # Chemical properties
-    density: unit.Quantity = attr.ib(converter=unit.converter_optional(UNIT_DENSITY), default=None, kw_only=True)
     molecular_structure: MolecularStructure = attr.ib(default=None, kw_only=True)
-    specific_heat: unit.Quantity = attr.ib(converter=unit.converter_optional(UNIT_SPECIFIC_HEAT), default=None,
-                                           kw_only=True)
+    specific_heat = attr.ib(converter=unit.converter(unit.registry.cal / unit.registry.g, True),
+                            default=None, kw_only=True, type=unit.TYPE_PARSE_VALUE)
+    density = attr.ib(converter=unit.converter(unit.registry.g / unit.registry.L, True),
+                      default=None, kw_only=True, type=unit.TYPE_PARSE_VALUE)
 
     # Inert gas flag
     inert: bool = attr.ib(default=False, kw_only=True)
@@ -214,6 +212,13 @@ registry = storage.Registry([
         density=0.9
     ),
     ChemicalProperties(
+        'Nitrogen', 'N_2',
+        molecular_structure=MolecularStructure.DIATOMIC,
+        specific_heat=0.2485,
+        density=1.25,
+        inert=True
+    ),
+    ChemicalProperties(
         'Nitric-oxide', 'NO',
         molecular_structure=MolecularStructure.DIATOMIC,
         specific_heat=0.2328,
@@ -221,13 +226,6 @@ registry = storage.Registry([
     ),
     ChemicalProperties(
         'Nitric-oxides', 'NO_x'
-    ),
-    ChemicalProperties(
-        'Nitrogen', 'N_2',
-        molecular_structure=MolecularStructure.DIATOMIC,
-        specific_heat=0.2485,
-        density=1.25,
-        inert=True
     ),
     ChemicalProperties(
         'Nitrogen-dioxide', 'NO_2',
@@ -308,7 +306,7 @@ registry = storage.Registry([
 @attr.s(frozen=True)
 class Component(object):
     # Actual concentration
-    quantity: unit.Quantity = attr.ib(converter=unit.converter(unit.dimensionless))
+    quantity = attr.ib(converter=unit.converter(), type=unit.TYPE_PARSE_VALUE)
 
     # Gas type
     properties: ChemicalProperties = attr.ib()
@@ -328,7 +326,7 @@ class Component(object):
         elif magnitude > 0:
             units = unit.registry.ppb
         else:
-            units = unit.registry.dimensionless
+            units = unit.dimensionless
 
         object.__setattr__(self, 'quantity', self.quantity.to(units))
 
@@ -419,7 +417,7 @@ class Mixture(object):
                 raise CalculationError('Multiplication factor must be dimensionless')
 
             # Cast to magnitude
-            other = other.to('dimensionless').quantity
+            other = other.to(unit.dimensionless).quantity
 
         if not isinstance(other, float):
             raise NotImplementedError(f"Cannot multiply {type(other)} by Mixture")
@@ -461,12 +459,12 @@ class Mixture(object):
     @classmethod
     def auto_balance(cls, components: List[Component], balance: ChemicalProperties) -> Mixture:
         # Calculate balance concentration automatically
-        balance_quantity = 1
+        balance_quantity = 1.0
 
         for component in components:
             balance_quantity -= component.quantity
 
-        return Mixture(components, Component(balance_quantity, balance))
+        return Mixture(components, Component(unit.Quantity(balance_quantity, unit.dimensionless), balance))
 
     @classmethod
     def from_str(cls, gas_list_str: str) -> Mixture:

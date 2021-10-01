@@ -15,8 +15,8 @@ def log_system(logger: typing.Optional[logging.ExtendedLogger] = None, level: in
     logger.log(level, f"Launch arguments: {' '.join(sys.argv)}")
 
     # Platform version
-    logger.log(level, "Runtime: python {}".format(sys.version.replace('\n', ' ')))
     logger.log(level, f"Interpreter: {sys.executable}")
+    logger.log(level, "Version: {}".format(sys.version.replace('\n', ' ')))
     logger.log(level, f"Platform: {platform.python_implementation()}")
     logger.log(level, f"Path: {';'.join(sys.path)}")
 

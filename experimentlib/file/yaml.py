@@ -4,13 +4,13 @@ import socket
 import tempfile
 import time
 import typing
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import yaml
 
 from experimentlib.data import unit
 from experimentlib.logging import classes
-from experimentlib.util import args, classes as util_classes, constant
+from experimentlib.util import arg_helper, classes as util_classes, constant
 
 
 class ExtendedError(yaml.YAMLError):
@@ -34,7 +34,7 @@ class ConstructorError(ExtendedError):
         else:
             msg = msg.strip() + f" from {source}, line {node.start_mark.line}"
 
-        super(ExtendedError, self).__init__(msg)
+        ExtendedError.__init__(self, msg)
 
 
 class EnvironmentTagError(ConstructorError):
@@ -136,7 +136,17 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         :param node: YAML node
         :return: datetime
         """
-        return args.parse_datetime(node.value)
+        return arg_helper.parse_datetime(node.value)
+
+    @staticmethod
+    def construct_datetime_utc(_, node: yaml.ScalarNode) -> datetime:
+        """ Construct datetime from node string.
+
+        :param _: unused
+        :param node: YAML node
+        :return: datetime
+        """
+        return arg_helper.parse_datetime(node.value, timezone.utc)
 
     @staticmethod
     def construct_env(_, node: yaml.ScalarNode) -> typing.Optional[str]:
@@ -218,7 +228,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
         with open(include_path_real) as f:
             # Include from specified path, inheriting restricted paths
-            include_data = yaml.load(f, ExtendedLoader.factory(self._include_paths))
+            include_data = yaml.load(f, ExtendedLoader.factory(self._enable_resolve, self._include_paths))
 
             return include_data
 
@@ -236,7 +246,8 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         except Exception as exc:
             raise ResolveTagError('Exception thrown while resolving node', node) from exc
 
-    def construct_timedelta(self, node) -> timedelta:
+    @staticmethod
+    def construct_timedelta(_, node) -> timedelta:
         node_unit = unit.parse(node.value)
 
         node_seconds = node_unit.m_as(unit.registry.sec)
@@ -259,6 +270,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
 # Add constructors
 ExtendedLoader.add_constructor('!datetime', ExtendedLoader.construct_datetime)
+ExtendedLoader.add_constructor('!datetime_utc', ExtendedLoader.construct_datetime_utc)
 ExtendedLoader.add_constructor('!envreq', ExtendedLoader.construct_env_required)
 ExtendedLoader.add_constructor('!env', ExtendedLoader.construct_env)
 ExtendedLoader.add_constructor('!format', ExtendedLoader.construct_format)
