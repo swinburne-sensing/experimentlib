@@ -1,4 +1,4 @@
-__version__ = '1.1.0dev'
+__version__ = '1.1.0dev1'
 
 __author__ = 'Chris Harrison'
 __credits__ = [__author__]

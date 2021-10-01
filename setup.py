@@ -19,7 +19,7 @@ with open(os.path.join(os.path.dirname(__file__), 'experimentlib', '__init__.py'
 
 # Read requirements from file
 with open('requirements.txt', 'r') as file_init:
-    requirements = [x.strip() for x in file_init if x.strip()]
+    requirements = [x.strip() for x in file_init if x.strip() if not x.startswith('#')]
 
 
 setup(
