@@ -6,6 +6,9 @@ import re
 from setuptools import setup, find_packages
 
 
+_RE_URL_DEPENDENCY = re.compile(r'^[^:\s]+://[^#]+#egg=(.+)$')
+
+
 # Read properties from __init__.py
 with open(os.path.join(os.path.dirname(__file__), 'experimentlib', '__init__.py')) as file_init:
     content_init = file_init.read()
@@ -19,7 +22,14 @@ with open(os.path.join(os.path.dirname(__file__), 'experimentlib', '__init__.py'
 
 # Read requirements from file
 with open('requirements.txt', 'r') as file_init:
-    requirements = [x.strip() for x in file_init if x.strip() if not x.startswith('#')]
+    requirements = [line.strip() for line in file_init if not line.startswith('#')]
+
+# Fix dependencies from git
+for n, requirement in enumerate(requirements):
+    match_requirement = _RE_URL_DEPENDENCY.match(requirement)
+
+    if match_requirement is not None:
+        requirements[n] = match_requirement[1] + ' @ ' + requirement
 
 
 setup(
