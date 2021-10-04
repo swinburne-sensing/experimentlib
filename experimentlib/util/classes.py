@@ -65,7 +65,12 @@ def instance_from_dict(config: typing.Dict[str, typing.Any], parent: typing.Any)
         raise InstanceError('Configuration dictionary requires either "class" or "method" key')
 
 
-def resolve_global(name: str):
+def resolve_global(name: str) -> typing.Any:
+    """
+
+    :param name:
+    :return:
+    """
     # Split name
     name = name.split('.')
 

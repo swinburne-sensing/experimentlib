@@ -6,11 +6,13 @@ from experimentlib.logging.handlers import ColoramaStreamHandler
 from experimentlib.logging.levels import *
 
 
-_SUPRESSED_LOGGERS = [
+# Loggers the generate lots of messages, can sometimes be useful to suppress output to provide cleaner logs
+_SUPPRESSED_LOGGERS = [
     'aioinflux',
     'matplotlib.font_manager',
     'pymodbus',
     'pyvisa',
+    'transitions.core',
     'urllib3',
     'urllib3.connectionpool'
 ]
@@ -164,10 +166,10 @@ def get_logger(name: typing.Optional[str] = None) -> ExtendedLogger:
     return logger
 
 
-def basic_logging(supress_suggested: bool = True, **kwargs) -> None:
+def basic_logging(suppress_suggested: bool = True, **kwargs) -> None:
     """ Wrapper for standard basic logging that uses a colourised console stream by default.
 
-    :param supress_suggested: if True some recommended loggers will be raised to the INFO level to reduce log spam
+    :param suppress_suggested: if True some recommended loggers will be raised to the INFO level to reduce log spam
     :param kwargs: keyword arguments passed to logging.basicConfig
     """
     if 'handlers' not in kwargs:
@@ -179,10 +181,14 @@ def basic_logging(supress_suggested: bool = True, **kwargs) -> None:
     if 'datefmt' not in kwargs:
         kwargs['datefmt'] = '%y%m%d %H:%M:%S'
 
+    if 'level' in kwargs and type(kwargs['level']) is str:
+        # Convert string to level number, supports additional levels without modding logging.basicConfig
+        kwargs['level'] = NAME_TO_LEVEL[kwargs['level'].upper()]
+
     logging.basicConfig(**kwargs)
 
-    if supress_suggested:
-        for logger_name in _SUPRESSED_LOGGERS:
+    if suppress_suggested:
+        for logger_name in _SUPPRESSED_LOGGERS:
             logging.getLogger(logger_name).setLevel(INFO)
 
 

@@ -1,7 +1,7 @@
 import logging
 
 
-__all__ = ['NOTSET', 'META', 'LOCK', 'TRACE', 'COMM', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+__all__ = ['NOTSET', 'META', 'LOCK', 'TRACE', 'DEBUG', 'COMM', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'NAME_TO_LEVEL']
 
 
 # Logging level aliases
@@ -32,3 +32,19 @@ META = logging.META
 LOCK = logging.LOCK
 TRACE = logging.TRACE
 COMM = logging.COMM
+
+
+NAME_TO_LEVEL = {
+    'NOTSET': NOTSET,
+    'META': META,
+    'LOCK': LOCK,
+    'TRACE': TRACE,
+    'DEBUG': DEBUG,
+    'COMM': COMM,
+    'INFO': INFO,
+    'WARNING': WARNING,
+    'WARN': WARNING,
+    'ERROR': ERROR,
+    'CRITICAL': CRITICAL,
+    'FATAL': CRITICAL
+}
