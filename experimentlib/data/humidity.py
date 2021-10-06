@@ -84,7 +84,7 @@ def abs_to_rel(temperature: _TYPE_INPUT, absolute_humidity: _TYPE_INPUT) -> unit
 
     pw = temperature * absolute_humidity / _HUMID_ABS_C
 
-    return unit.Quantity((pw / _humidity_calc_pws_exp(temperature)).quantity, unit_rel)
+    return unit.Quantity((pw / _humidity_calc_pws_exp(temperature)).magnitude, unit_rel)
 
 
 # Calculate absolute humidity from dew point
@@ -145,4 +145,4 @@ def rel_to_abs(temperature: _TYPE_INPUT, relative_humidity: _TYPE_INPUT) -> unit
 
     pw = _humidity_calc_pws_exp(temperature) * relative_humidity.m_as(unit.dimensionless)
 
-    return unit.Quantity((_HUMID_ABS_C * pw.to('Pa') / temperature).quantity, unit_abs)
+    return unit.Quantity((_HUMID_ABS_C * pw.to('Pa') / temperature).magnitude, unit_abs)

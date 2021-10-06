@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import re
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import attr
 
@@ -55,10 +55,10 @@ class ChemicalProperties(storage.RegistryEntry):
 
     # Chemical properties
     molecular_structure: MolecularStructure = attr.ib(default=None, kw_only=True)
-    specific_heat = attr.ib(converter=unit.converter(unit.registry.cal / unit.registry.g, True),
-                            default=None, kw_only=True, type=unit.TYPE_PARSE_VALUE)
-    density = attr.ib(converter=unit.converter(unit.registry.g / unit.registry.L, True),
-                      default=None, kw_only=True, type=unit.TYPE_PARSE_VALUE)
+    specific_heat: Union[unit.TYPE_PARSE_VALUE, unit.Quantity] = attr.ib(
+        converter=unit.converter(unit.registry.cal / unit.registry.g, True), default=None, kw_only=True)
+    density: Union[unit.TYPE_PARSE_VALUE, unit.Quantity] = attr.ib(
+        converter=unit.converter(unit.registry.g / unit.registry.L, True), default=None, kw_only=True)
 
     # Inert gas flag
     inert: bool = attr.ib(default=False, kw_only=True)
@@ -306,7 +306,7 @@ registry = storage.Registry([
 @attr.s(frozen=True)
 class Component(object):
     # Actual concentration
-    quantity = attr.ib(converter=unit.converter(), type=unit.TYPE_PARSE_VALUE)
+    quantity: Union[unit.TYPE_PARSE_VALUE, unit.Quantity] = attr.ib(converter=unit.converter())
 
     # Gas type
     properties: ChemicalProperties = attr.ib()
@@ -417,7 +417,7 @@ class Mixture(object):
                 raise CalculationError('Multiplication factor must be dimensionless')
 
             # Cast to magnitude
-            other = other.to(unit.dimensionless).quantity
+            other = other.to(unit.dimensionless).magnitude
 
         if not isinstance(other, float):
             raise NotImplementedError(f"Cannot multiply {type(other)} by Mixture")

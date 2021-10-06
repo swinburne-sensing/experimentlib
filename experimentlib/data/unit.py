@@ -23,7 +23,7 @@ def _handle_percent(x):
 registry = pint.UnitRegistry(autoconvert_offset_to_baseunit=True, preprocessors=[_handle_percent])
 
 
-# Hack to make Quantity objects pickable by fixing implementation used in registry
+# Hack to make Quantity objects pickle-able by fixing implementation used in registry
 # noinspection PyProtectedMember
 class Quantity(pint.quantity._Quantity):
     _REGISTRY = registry
@@ -74,7 +74,7 @@ def _quantity_format_decorator(format_method):
 
         if self.units in (registry.pct, registry.ppm, registry.ppb):
             # Discard custom pint flags
-            format_spec = f"{{:{pint.formatting.remove_custom_flags(spec).replace('#', '').replace('g', 'f')}}}"
+            format_spec = f"{{:{pint.formatting.remove_custom_flags(spec).replace('g', 'f').replace('#', '')}}}"
 
             abs_mag = self.m_as(registry.dimensionless)
 
@@ -94,19 +94,18 @@ def _quantity_format_decorator(format_method):
 
             # Suppress trailing zeros
             if '.' in value_str:
-                end_flag = False
-
-                while not end_flag and len(value_str) > 1:
-                    end_flag = value_str[-1] == '.'
-
-                    if not end_flag and value_str[-1] != '0':
-                        break
-
-                    value_str = value_str[:-1]
+                value_str = value_str.rstrip('0').rstrip('.')
 
             return value_str + scale_str
         else:
-            return format_method(self, spec)
+            value_str = format_method(self, spec)
+            value_split = value_str.split(' ', 1)
+
+            # Suppress trailing zeros
+            if '.' in value_split[0]:
+                value_split[0] = value_split[0].rstrip('0').rstrip('.')
+
+            return ' '.join(value_split)
 
     return format_decorator
 
@@ -146,6 +145,9 @@ def parse_unit(x: TYPE_PARSE_UNIT) -> Unit:
         # Extract Unit, can sometimes occur when using values from pint
         return x.units
 
+    if not isinstance(x, str):
+        raise QuantityParseError(f"Unsupported input type \"{type(x)}\"")
+
     if hasattr(registry, x):
         return getattr(registry, x)
 
@@ -160,7 +162,8 @@ def parse(x: TYPE_PARSE_VALUE, to_unit: typing.Optional[TYPE_PARSE_UNIT] = None)
     :return: Quantity with parsed magnitude and specified unit
     """
     # Parse unit
-    to_unit = parse_unit(to_unit)
+    if to_unit is not None:
+        to_unit = parse_unit(to_unit)
 
     if not isinstance(x, Quantity):
         # Convert int to float
