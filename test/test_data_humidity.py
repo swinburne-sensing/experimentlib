@@ -20,7 +20,7 @@ class TestDataHumidity(unittest.TestCase):
 
         calc_rel_humid = humidity.abs_to_rel(temp, abs_humid)
 
-        self.assertAlmostEqual(rel_humid.m_as(humidity.unit_abs), calc_rel_humid.m_as(humidity.unit_abs), 1)
+        self.assertAlmostEqual(rel_humid.m_as(unit.dimensionless), calc_rel_humid.m_as(unit.dimensionless), 1)
 
 
 if __name__ == '__main__':
