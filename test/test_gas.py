@@ -4,6 +4,12 @@ from experimentlib.data import gas, unit
 
 
 class TestDataGas(unittest.TestCase):
+    def test_print(self):
+        gas_parse = gas.Mixture.from_str('1% hydrogen, air')
+
+        self.assertEqual(str(gas_parse), '1% H_2')
+        self.assertEqual(str(gas_parse.balance), '99% Air')
+
     def test_mix(self):
         gas_parse_a = gas.Mixture.from_str('1% hydrogen, air')
         gas_parse_b = gas.Mixture.from_str('1% methane, air')

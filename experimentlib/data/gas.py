@@ -459,12 +459,12 @@ class Mixture(object):
     @classmethod
     def auto_balance(cls, components: List[Component], balance: ChemicalProperties) -> Mixture:
         # Calculate balance concentration automatically
-        balance_quantity = 1.0
+        balance_quantity = unit.Quantity(1.0, unit.dimensionless)
 
         for component in components:
             balance_quantity -= component.quantity
 
-        return Mixture(components, Component(unit.Quantity(balance_quantity, unit.dimensionless), balance))
+        return Mixture(components, Component(balance_quantity, balance))
 
     @classmethod
     def from_str(cls, gas_list_str: str) -> Mixture:
