@@ -69,7 +69,7 @@ if pint_pandas is not None:
 
 # Decorate Quantity formatter to catch printing dimensionless units
 def _quantity_format_decorator(format_method):
-    def format_decorator(self, spec):
+    def format_decorator(self: Quantity, spec):
         spec = spec or self.default_format
 
         if self.units in (registry.pct, registry.ppm, registry.ppb):
@@ -97,6 +97,18 @@ def _quantity_format_decorator(format_method):
                 value_str = value_str.rstrip('0').rstrip('.')
 
             return value_str + scale_str
+        elif self.units.is_compatible_with(registry.sec) and self.magnitude > 1:
+            # Discard custom pint flags
+            format_spec = f"{{:{pint.formatting.remove_custom_flags(spec).replace('g', 'f').replace('#', '')}}}"
+
+            # Force output directly to seconds
+            value_str = format_spec.format(self.m_as(registry.sec))
+
+            # Suppress trailing zeros
+            if '.' in value_str:
+                value_str = value_str.rstrip('0').rstrip('.')
+
+            return value_str + ' ' + str(registry.sec)
         else:
             value_str = format_method(self, spec)
             value_split = value_str.split(' ', 1)

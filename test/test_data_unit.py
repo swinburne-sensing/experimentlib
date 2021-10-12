@@ -111,6 +111,9 @@ class TestDataUnit(unittest.TestCase):
         self.assertEqual(str(unit.parse(1).to('ppm')), '100%')
         self.assertEqual(str(unit.parse(1e-6)), '1×10⁻⁶')
 
+    def test_time(self):
+        self.assertEqual(str(unit.parse(1000, 's')), '1000 s')
+
 
 if __name__ == '__main__':
     unittest.main()
