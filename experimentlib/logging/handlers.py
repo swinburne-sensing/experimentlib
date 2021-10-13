@@ -411,7 +411,8 @@ class PushoverHandler(logging.Handler):
         self._client.send_message(msg, priority=priority, title=title, timestamp=timestamp, html=int(html))
 
 
-_T_QUEUE = typing.Union[queue_lib.SimpleQueue[typing.Any], queue_lib.Queue[typing.Any], ConvertingDict]
+# Quotes required to ensure compatibility with Python < 3.9
+_T_QUEUE = typing.Union['queue_lib.SimpleQueue[typing.Any]', 'queue_lib.Queue[typing.Any]', ConvertingDict]
 _T_HANDLERS = typing.Union[typing.Iterable[logging.Handler], ConvertingList]
 
 
