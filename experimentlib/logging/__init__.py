@@ -166,20 +166,32 @@ def get_logger(name: typing.Optional[str] = None) -> ExtendedLogger:
     return logger
 
 
-def basic_logging(suppress_suggested: bool = True, **kwargs) -> None:
+def basic_logging(suppress_suggested: bool = True, include_thread: bool = False, include_process: bool = False,
+                  **kwargs):
     """ Wrapper for standard basic logging that uses a colourised console stream by default.
 
     :param suppress_suggested: if True some recommended loggers will be raised to the INFO level to reduce log spam
+    :param include_thread:
+    :param include_process:
     :param kwargs: keyword arguments passed to logging.basicConfig
     """
     if 'handlers' not in kwargs:
         kwargs['handlers'] = [ColoramaStreamHandler()]
 
     if 'format' not in kwargs:
-        kwargs['format'] = '%(asctime)s.%(msecs)03d [%(levelname).1s] %(name)s: %(message)s'
+        kwargs['format'] = (
+            '%(asctime)s.%(msecs)03d [%(levelname).1s] '
+            '%(processName)d:' if include_process else ''
+            '%(threadName)d:' if include_thread else ''
+            '%(name)s: %(message)s'
+        )
 
     if 'datefmt' not in kwargs:
         kwargs['datefmt'] = '%y%m%d %H:%M:%S'
+
+    if 'filename' in kwargs:
+        # Manually add to handlers list
+        kwargs['handlers'].append(logging.FileHandler(kwargs.pop('filename'), encoding='utf-8'))
 
     if 'level' in kwargs and type(kwargs['level']) is str:
         # Convert string to level number, supports additional levels without modding logging.basicConfig
