@@ -166,8 +166,8 @@ def get_logger(name: typing.Optional[str] = None) -> ExtendedLogger:
     return logger
 
 
-def basic_logging(suppress_suggested: bool = True, include_thread: bool = False, include_process: bool = False,
-                  **kwargs):
+def basic_logging(filename: typing.Optional[str] = None, suppress_suggested: bool = True, include_thread: bool = False,
+                  include_process: bool = False, **kwargs):
     """ Wrapper for standard basic logging that uses a colourised console stream by default.
 
     :param suppress_suggested: if True some recommended loggers will be raised to the INFO level to reduce log spam
@@ -189,9 +189,9 @@ def basic_logging(suppress_suggested: bool = True, include_thread: bool = False,
     if 'datefmt' not in kwargs:
         kwargs['datefmt'] = '%y%m%d %H:%M:%S'
 
-    if 'filename' in kwargs:
+    if filename is not None:
         # Manually add to handlers list
-        kwargs['handlers'].append(logging.FileHandler(kwargs.pop('filename'), encoding='utf-8'))
+        kwargs['handlers'].append(logging.FileHandler(filename, encoding='utf-8'))
 
     if 'level' in kwargs and type(kwargs['level']) is str:
         # Convert string to level number, supports additional levels without modding logging.basicConfig
