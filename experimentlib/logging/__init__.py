@@ -180,9 +180,9 @@ def basic_logging(suppress_suggested: bool = True, include_thread: bool = False,
 
     if 'format' not in kwargs:
         kwargs['format'] = (
-            '%(asctime)s.%(msecs)03d [%(levelname).1s] '
-            '%(processName)s:' if include_process else ''
-            '%(threadName)s:' if include_thread else ''
+            '%(asctime)s.%(msecs)03d [%(levelname).1s] ' +
+            ('%(processName)s:' if include_process else '') +
+            ('%(threadName)s:' if include_thread else '') +
             '%(name)s: %(message)s'
         )
 
@@ -210,3 +210,12 @@ def dict_config(config: typing.Dict[str, typing.Any]) -> None:
     :param config: configuration dictionary
     """
     logging.config.dictConfig(config)
+
+
+def shutdown(*args, **kwargs):
+    """ Shortcut to logging.shutdown.
+    
+    :param args: passed to logging.shutdown
+    :param kwargs:  passed to logging.shutdown
+    """
+    logging.shutdown(*args, **kwargs)
