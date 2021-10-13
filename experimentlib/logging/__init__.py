@@ -181,8 +181,8 @@ def basic_logging(suppress_suggested: bool = True, include_thread: bool = False,
     if 'format' not in kwargs:
         kwargs['format'] = (
             '%(asctime)s.%(msecs)03d [%(levelname).1s] '
-            '%(processName)d:' if include_process else ''
-            '%(threadName)d:' if include_thread else ''
+            '%(processName)s:' if include_process else ''
+            '%(threadName)s:' if include_thread else ''
             '%(name)s: %(message)s'
         )
 
