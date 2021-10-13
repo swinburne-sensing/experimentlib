@@ -214,7 +214,7 @@ def dict_config(config: typing.Dict[str, typing.Any]) -> None:
 
 def shutdown(*args, **kwargs):
     """ Shortcut to logging.shutdown.
-    
+
     :param args: passed to logging.shutdown
     :param kwargs:  passed to logging.shutdown
     """
