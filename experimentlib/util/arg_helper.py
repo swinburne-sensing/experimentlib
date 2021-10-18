@@ -1,6 +1,7 @@
 import collections
 import os.path
 import re
+import sys
 import typing
 from datetime import datetime, tzinfo
 
@@ -26,6 +27,10 @@ class DateTimeParseError(ValueError):
 
 class PairParseError(ValueError):
     pass
+
+
+def get_args() -> str:
+    return ' '.join(sys.argv)
 
 
 def parse_datetime(value: str, parse_tz: typing.Optional[tzinfo] = None) -> datetime:

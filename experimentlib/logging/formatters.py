@@ -28,10 +28,10 @@ class PushoverFormatter(logging.Formatter):
         ]
 
         if record.threadName:
-            msg_lines.append(f"<b>Thread:</b> {record.threadName}")
+            msg_lines.append(f"<b>Thread:</b> {record.threadName} (id: {record.thread})")
 
         if record.processName:
-            msg_lines.append(f"<b>Process:</b> {record.processName}")
+            msg_lines.append(f"<b>Process:</b> {record.processName} (id: {record.process})")
 
         msg = '\n'.join(msg_lines)
 

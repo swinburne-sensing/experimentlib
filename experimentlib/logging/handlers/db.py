@@ -13,6 +13,7 @@ from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
 from experimentlib.logging import levels
 from experimentlib.logging.filters import discard_name_prefix_factory
 from experimentlib.logging.formatters import InfluxDBFormatter
+from experimentlib.util.arg_helper import get_args
 
 
 class InfluxDBHandler(logging.Handler):
@@ -61,7 +62,7 @@ class InfluxDBHandler(logging.Handler):
         logging.CRITICAL: Severity.CRITICAL
     }
 
-    def __init__(self, name: str, bucket: Union[str, Mapping[int, str]],
+    def __init__(self, bucket: Union[str, Mapping[int, str]], name: Optional[str] = None,
                  client_args: Optional[Mapping[str, Any]] = None, level: int = logging.NOTSET,
                  measurement: Optional[str] = None,
                  severity_map: Mapping[int, Union[int, Severity]] = None):
@@ -77,10 +78,13 @@ class InfluxDBHandler(logging.Handler):
         """
         logging.Handler.__init__(self, level)
 
+        name = name or get_args()
+
         # Force output formatter
         logging.Handler.setFormatter(self, InfluxDBFormatter())
 
-        # Discard records from urllib3 to prevent recursion
+        # Discard records from influxdb_client and urllib3 to prevent recursion
+        self.addFilter(discard_name_prefix_factory('influxdb_client.'))
         self.addFilter(discard_name_prefix_factory('urllib3.'))
 
         self._measurement = measurement or 'syslog'
@@ -121,9 +125,14 @@ class InfluxDBHandler(logging.Handler):
         else:
             self._client = InfluxDBClient(**client_args, retries=self.RETRIES)
 
+        self._write_api = self._client.write_api(ASYNCHRONOUS, self._point_settings)
+
     def __del__(self):
         # Ensure client is closed on deletion
-        if hasattr(self, '_client') and self._client is not None:
+        if hasattr(self, '_write_api'):
+            self._write_api.close()
+
+        if hasattr(self, '_client'):
             self._client.close()
 
     def setFormatter(self, fmt: logging.Formatter) -> None:
@@ -147,7 +156,7 @@ class InfluxDBHandler(logging.Handler):
         point.field('facility_code', self.FACILITY_CODE)
         point.field('message', self.format(record))
         point.field('procid', record.process or 0)
-        point.field('severity_code', severity.keyword)
+        point.field('severity_code', severity.value)
         point.field('timestamp', record.created)
         point.field('version', 1)
 
@@ -157,7 +166,7 @@ class InfluxDBHandler(logging.Handler):
         point.field('relativeCreated', record.relativeCreated)
 
         # Syslog compatible tags
-        point.tag('severity', severity.value)
+        point.tag('severity', severity.keyword)
 
         # Extended tags
         point.tag('name', record.name)
@@ -170,5 +179,4 @@ class InfluxDBHandler(logging.Handler):
         point.tag('threadName', record.threadName or '')
 
         # Write point
-        with self._client.write_api(ASYNCHRONOUS, self._point_settings) as write_api:
-            write_api.write(bucket, record=point, write_precision=WritePrecision.NS)
+        self._write_api.write(bucket, record=point, write_precision=WritePrecision.NS)

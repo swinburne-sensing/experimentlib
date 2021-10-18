@@ -22,17 +22,20 @@ class ConstructorError(ExtendedError):
     """ Base class for errors generated during construction of custom nodes. Includes additional information about the
     location of the error. """
     def __init__(self, msg: str, node: typing.Optional[yaml.ScalarNode] = None, include_node: bool = True):
-        if node.start_mark.name == '<unicode string>':
-            source = node.start_mark.name
+        if node is not None:
+            if node.start_mark.name == '<unicode string>':
+                source = node.start_mark.name
+            else:
+                source = f"\"{os.path.realpath(node.start_mark.name)}\""
         else:
-            source = f"\"{os.path.realpath(node.start_mark.name)}\""
+            source = '<unknown>'
 
         # Append node data to exception message
         if include_node:
-            msg = msg.strip() + f" in node \"{node.tag}\": \"{node.value}\" from {source}, line " \
-                            f"{node.start_mark.line}"
+            msg = msg.strip() + f" from YAML node \"{node.tag}\": \"{node.value}\" from {source}, line " \
+                            f"{node.start_mark.line + 1}"
         else:
-            msg = msg.strip() + f" from {source}, line {node.start_mark.line}"
+            msg = msg.strip() + f" from {source}, line {node.start_mark.line + 1}"
 
         ExtendedError.__init__(self, msg)
 
@@ -164,7 +167,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
             elif len(node) == 2:
                 return node[1]
             else:
-                raise EnvironmentTagError('Tag should only contain variable name and default value')
+                raise EnvironmentTagError('Tag should only contain variable name and default value', node)
 
         return os.environ[node[0]]
 
@@ -178,7 +181,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         :raises EnvironmentTagError: on undefined environment variable
         """
         if node.value not in os.environ:
-            raise EnvironmentTagError(f"\"{node.value}\" not defined")
+            raise EnvironmentTagError(f"Environment variable \"{node.value}\" not defined", node)
 
         return os.environ[node.value]
 
@@ -199,7 +202,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         :return: any structure supported by YAML
         """
         if self._stream_root is None:
-            raise ConstructorError('Include tag cannot be used when parsing strings')
+            raise ConstructorError('Include tag cannot be used when parsing input string', node)
 
         include_path_real = None
 

@@ -10,6 +10,7 @@ import pushover
 
 from experimentlib.logging.filters import discard_name_prefix_factory
 from experimentlib.logging.formatters import PushoverFormatter
+from experimentlib.util.arg_helper import get_args
 
 
 class PushoverHandler(logging.Handler):
@@ -65,7 +66,7 @@ class PushoverHandler(logging.Handler):
         logging.Handler.__init__(self, level)
 
         # Force formatter
-        self.setFormatter(PushoverFormatter())
+        logging.Handler.setFormatter(self, PushoverFormatter())
 
         # Discard records from urllib3 to prevent recursion
         self.addFilter(discard_name_prefix_factory('urllib3.'))
@@ -82,7 +83,7 @@ class PushoverHandler(logging.Handler):
         self._priority_min = min(self._priority_map.keys())
         self._priority_max = min(self._priority_map.keys())
 
-        self._title = title
+        self._title = title or get_args()
 
         # Instantiate client and test connection
         self._client = pushover.Pushover(api_token)
