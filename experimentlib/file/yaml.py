@@ -2,7 +2,6 @@ import getpass
 import os.path
 import socket
 import tempfile
-import time
 import typing
 from datetime import datetime, timedelta, timezone
 
@@ -10,7 +9,7 @@ import yaml
 
 from experimentlib.data import unit
 from experimentlib.logging import classes
-from experimentlib.util import arg_helper, classes as util_classes, constant
+from experimentlib.util import arg_helper, classes as util_classes, constant, time as elib_time
 
 
 class ExtendedError(yaml.YAMLError):
@@ -104,11 +103,19 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         :raises IndexError: on invalid format specification
         :raises KeyError: on format specification with unknown field codes
         """
+        timestamp = elib_time.now()
+        timestamp_utc = timestamp.astimezone(timezone.utc)
+
         format_mapping = {
-            'date': time.strftime(constant.FORMAT_DATE),
-            'time': time.strftime(constant.FORMAT_TIME),
-            'datetime': time.strftime(constant.FORMAT_TIMESTAMP_FILENAME),
-            'timestamp': str(int(time.time()))
+            'date': timestamp.strftime(constant.FORMAT_DATE),
+            'date_utc':timestamp_utc.strftime(constant.FORMAT_DATE),
+            'time': timestamp.strftime(constant.FORMAT_TIME),
+            'time_utc': timestamp_utc.strftime(constant.FORMAT_TIME),
+            'datetime': timestamp.strftime(constant.FORMAT_TIMESTAMP_FILENAME),
+            'datetime_utc': timestamp_utc.strftime(constant.FORMAT_TIMESTAMP_FILENAME),
+            'datetime_iso': timestamp.isoformat(),
+            'datetime_utc_iso': timestamp_utc.isoformat(),
+            'timestamp': str(int(timestamp.timestamp()))
         }
 
         format_mapping.update(cls._format_mapping_system)
