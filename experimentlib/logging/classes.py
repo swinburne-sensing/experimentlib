@@ -9,7 +9,7 @@ class LoggedMetaclass(ABCMeta):
     """ Metaclass that creates a logger instance for all classes derived from  """
 
     def __new__(mcs, *args, logger_name: typing.Optional[str] = None, **kwargs):
-        x = super(LoggedMetaclass, mcs).__new__(mcs, *args, **kwargs)
+        x = ABCMeta.__new__(mcs, *args, **kwargs)
 
         # Assign class logger
         x._logged_cls = logging.get_logger(args[0] + '_cls')

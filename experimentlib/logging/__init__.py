@@ -2,7 +2,7 @@ import logging
 import logging.config
 import typing
 
-from experimentlib.logging.handlers import ColoramaStreamHandler
+from experimentlib.logging.handlers.console import ColoramaStreamHandler
 from experimentlib.logging.levels import *
 
 

@@ -19,7 +19,7 @@ class PushoverFormatter(logging.Formatter):
     _RE_EXC_FILE = re.compile(r'^\s*File "([^,]+)",[^\d]*([\d]+), in\s+(.*)$')
 
     def format(self, record: logging.LogRecord) -> str:
-        lines = [
+        msg_lines = [
             record.message.strip(),
             '',
             f"<b>Logger:</b> {record.name}",
@@ -28,12 +28,19 @@ class PushoverFormatter(logging.Formatter):
         ]
 
         if record.threadName:
-            lines.append(f"<b>Thread:</b> {record.threadName}")
+            msg_lines.append(f"<b>Thread:</b> {record.threadName}")
 
         if record.processName:
-            lines.append(f"<b>Process:</b> {record.processName}")
+            msg_lines.append(f"<b>Process:</b> {record.processName}")
+
+        msg = '\n'.join(msg_lines)
 
         if record.exc_info:
+            msg_lines = []
+
+            # Get allowable length
+            msg_remaining = self._MSG_CHAR_LIMIT - len(msg)
+
             # Get a summarised version of the traceback
             exc_lines = self.formatException(record.exc_info).split('\n')
 
@@ -53,7 +60,7 @@ class PushoverFormatter(logging.Formatter):
                                              f"\"{traceback_file_match[1]}\", line {traceback_file_match[2]}"
                     else:
                         # Last line of traceback contains exception type and message
-                        lines.extend([
+                        msg_lines.extend([
                             '',
                             f"<b>Exception:</b> {exc_line.strip()}",
                             f"  <b>from:</b> {traceback_file}",
@@ -67,4 +74,12 @@ class PushoverFormatter(logging.Formatter):
                     traceback_file = 'unknown'
                     continue
 
-        return '\n'.join(lines)
+            exc_msg = '\n'.join(msg_lines)
+
+            if len(exc_msg) > msg_remaining:
+                # Truncate exception lines
+                exc_msg = exc_msg[:msg_remaining]
+
+            msg += exc_msg
+
+        return msg
