@@ -10,7 +10,8 @@ from experimentlib.logging import classes
 
 class LoggedThreadLock(classes.LoggedClass, contextlib.AbstractContextManager):
     def __init__(self, name: typing.Optional[str] = None, reenterant: bool = True):
-        super(LoggedThreadLock, self).__init__(name)
+        classes.LoggedClass.__init__(self, name)
+        contextlib.AbstractContextManager.__init__(self)
 
         self._reenterant = reenterant
 
@@ -91,7 +92,7 @@ class LoggedThreadLock(classes.LoggedClass, contextlib.AbstractContextManager):
 
 class IntervalLock(classes.LoggedClass):
     def __init__(self, name: typing.Optional[str] = None):
-        super(IntervalLock, self).__init__(name)
+        classes.LoggedClass.__init__(self, name)
 
         self._interval_timeout: typing.Optional[datetime] = None
 

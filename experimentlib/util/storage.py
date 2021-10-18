@@ -27,7 +27,7 @@ class Registry(typing.Generic[T]):
 
         :param initial: iterable for initial insertion into this Registry
         """
-        super(Registry, self).__init__()
+        typing.Generic.__init__(self)
 
         self._registry: typing.Dict[str, T] = {}
 

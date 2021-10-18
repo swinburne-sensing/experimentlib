@@ -15,12 +15,12 @@ class GitError(Exception):
 def get_git_hash(path: typing.Optional[str] = None, length: typing.Optional[int] = None) -> str:
     """ Fetch the current git commit hash of the specified director, optionally truncating the hash to a shorted format.
 
-        Inspired by: https://stackoverflow.com/questions/12826723/possible-to-extract-the-git-repo-revision-hash-via-python-code
+    Inspired by: https://stackoverflow.com/questions/12826723/possible-to-extract-the-git-repo-revision-hash-via-python-code
 
-        :param path: path of git repository, defaults to callers module file path
-        :param length: optionally truncate hash to specified length
-        :return: hash as a str
-        """
+    :param path: path of git repository, defaults to callers module file path
+    :param length: optionally truncate hash to specified length
+    :return: hash as a str
+    """
     if path is None:
         # Get caller from stack and
         frame = inspect.stack()[1]

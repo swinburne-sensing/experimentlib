@@ -23,14 +23,22 @@ logging.TRACE = logging.DEBUG - 1
 # Logging external I/O
 logging.COMM = logging.DEBUG + 1
 
+# noinspection PyUnresolvedReferences
 logging.addLevelName(logging.META, 'META')
+# noinspection PyUnresolvedReferences
 logging.addLevelName(logging.LOCK, 'LOCKS')
+# noinspection PyUnresolvedReferences
 logging.addLevelName(logging.TRACE, 'TRACE')
+# noinspection PyUnresolvedReferences
 logging.addLevelName(logging.COMM, 'COMM')
 
+# noinspection PyUnresolvedReferences
 META = logging.META
+# noinspection PyUnresolvedReferences
 LOCK = logging.LOCK
+# noinspection PyUnresolvedReferences
 TRACE = logging.TRACE
+# noinspection PyUnresolvedReferences
 COMM = logging.COMM
 
 
