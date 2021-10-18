@@ -2,8 +2,8 @@ import getpass
 import os.path
 import socket
 import tempfile
-import typing
 from datetime import datetime, timedelta, timezone
+from typing import Any, IO, Iterable, Mapping, Optional, Union
 
 import yaml
 
@@ -20,7 +20,7 @@ class ExtendedError(yaml.YAMLError):
 class ConstructorError(ExtendedError):
     """ Base class for errors generated during construction of custom nodes. Includes additional information about the
     location of the error. """
-    def __init__(self, msg: str, node: typing.Optional[yaml.ScalarNode] = None, include_node: bool = True):
+    def __init__(self, msg: str, node: Optional[yaml.ScalarNode] = None, include_node: bool = True):
         if node is not None:
             if node.start_mark.name == '<unicode string>':
                 source = node.start_mark.name
@@ -59,7 +59,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
     """ An extended YAML loader including additional tags and security features. """
 
     # Shared mapping for format constructor (environment and system variables)
-    _format_mapping_system = {
+    _format_mapping_system: Mapping[str, str] = {
         'path_user': os.path.expanduser('~'),
         'path_temp': tempfile.gettempdir(),
         'system_hostname': socket.getfqdn(),
@@ -67,8 +67,9 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         **{'env_' + env_var: env_val for env_var, env_val in os.environ.items()}
     }
 
-    def __init__(self, stream: typing.Union[str, typing.IO], enable_resolve: bool = False,
-                 include_paths: typing.Optional[typing.Iterable[str]] = None):
+    def __init__(self, stream: Union[str, IO], enable_resolve: bool = False,
+                 include_paths: Optional[Iterable[str]] = None,
+                 format_kwargs: Optional[Mapping[str, str]] = None):
         if type(stream) is not str:
             self._stream_root, stream_filename = os.path.split(stream.name)
         else:
@@ -94,8 +95,10 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
                 self._include_paths.append(path)
                 self.logger().debug(f"Include allowed from \"{path}\"")
 
-    @classmethod
-    def _format_str(cls, format_str: str) -> str:
+        # Additional format kwargs
+        self._format_kwargs = format_kwargs
+
+    def _format_str(self, format_str: str) -> str:
         """ Format specified string with system and environment variables.
 
         :param format_str: formatted string specification
@@ -118,19 +121,21 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
             'timestamp': str(int(timestamp.timestamp()))
         }
 
-        format_mapping.update(cls._format_mapping_system)
+        format_mapping.update(self._format_mapping_system)
+
+        if self._format_kwargs is not None:
+            format_mapping.update(self._format_kwargs)
 
         return format_str.format(**format_mapping)
 
-    @classmethod
-    def _format_node(cls, node: yaml.ScalarNode):
+    def _format_node(self, node: yaml.ScalarNode):
         """
 
         :param node: YAML node
         :return:
         """
         try:
-            return cls._format_str(node.value)
+            return self._format_str(node.value)
         except IndexError:
             raise FormatTagError('Invalid field format', node)
         except KeyError as exc:
@@ -159,7 +164,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         return arg_helper.parse_datetime(node.value, timezone.utc)
 
     @staticmethod
-    def construct_env(_, node: yaml.ScalarNode) -> typing.Optional[str]:
+    def construct_env(_, node: yaml.ScalarNode) -> Optional[str]:
         """ Construct string from environment variable specified in node.
 
         :param _: unused
@@ -201,7 +206,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         """
         return self._format_node(node)
 
-    def construct_include(self, node: yaml.ScalarNode) -> typing.Any:
+    def construct_include(self, node: yaml.ScalarNode) -> Any:
         """ Include content from another YAML file, optionally limiting the paths of files that can be included.
 
         Inspired by: https://stackoverflow.com/questions/528281/how-can-i-include-an-yaml-file-inside-another
@@ -243,7 +248,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
             return include_data
 
-    def construct_resolve(self, node: yaml.ScalarNode) -> typing.Any:
+    def construct_resolve(self, node: yaml.ScalarNode) -> Any:
         """ Resolve tag to Python object from global scope.
 
         :param node:
@@ -266,15 +271,15 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
         return timedelta(seconds=node_seconds)
 
     @classmethod
-    def factory(cls, enable_resolve: bool = False, include_paths: typing.Optional[typing.Iterable[str]] = None):
+    def factory(cls, *args, **kwargs):
         """ Get a wrapped constructor for ExtendedLoader with include paths restricted to the specified paths.
 
-        :param enable_resolve:
-        :param include_paths: list of paths from which files may be included from
+        :param args: passed to constructor
+        :param kwargs: passed to constructor
         :return: wrapped constructor
         """
         def f(stream):
-            return cls(stream, enable_resolve, include_paths)
+            return cls(stream, *args, **kwargs)
 
         return f
 
@@ -290,6 +295,12 @@ ExtendedLoader.add_constructor('!resolve', ExtendedLoader.construct_resolve)
 ExtendedLoader.add_constructor('!timedelta', ExtendedLoader.construct_timedelta)
 
 
-# Wrapper for yaml.load using the extended loader
-def load(stream: typing.Union[str, typing.IO], *args, **kwargs):
+def load(stream: Union[str, IO], *args, **kwargs) -> Any:
+    """ Equivalent to yaml.load using the extended loader
+
+    :param stream: input string or stream object for parsing
+    :param args:
+    :param kwargs:
+    :return:
+    """
     return yaml.load(stream, ExtendedLoader.factory(*args, **kwargs))
