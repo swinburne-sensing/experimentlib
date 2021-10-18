@@ -343,16 +343,16 @@ class PushoverHandler(logging.Handler):
         logging.CRITICAL: Priority.HIGH
     }
 
-    def __init__(self, level: int = logging.NOTSET,
-                 client_args: typing.Optional[typing.Mapping[str, typing.Any]] = None,
+    def __init__(self, api_token: str, user_key: str, level: int = logging.NOTSET,
                  priority_map: typing.Dict[int, typing.Union[int, Priority]] = None,
                  title: typing.Optional[str] = None):
         """
 
-        :param client_args:
+        :param api_token:
+        :param user_key:
+        :param level:
         :param priority_map:
         :param title:
-        :param level:
         """
         super(PushoverHandler, self).__init__(level)
 
@@ -377,8 +377,8 @@ class PushoverHandler(logging.Handler):
         self._title = title
 
         # Instantiate client and test connection
-        client_args = client_args or {}
-        self._client = pushover.Client(**client_args)
+        self._client = pushover.Pushover(api_token)
+        self._user_key = user_key
 
         # Verify user key (does not verify API key)
         # self._client.verify()
@@ -408,7 +408,7 @@ class PushoverHandler(logging.Handler):
     @tenacity.retry(retry=_RetryPushoverError(), stop=tenacity.stop_after_delay(600),
                     wait=tenacity.wait_fixed(30))
     def _send_message(self, msg: str, priority: int, title: str, timestamp: int, html: bool):
-        self._client.send_message(msg, priority=priority, title=title, timestamp=timestamp, html=int(html))
+        self._client.message(self._user_key, msg, priority=priority, title=title, timestamp=timestamp, html=int(html))
 
 
 # Quotes required to ensure compatibility with Python < 3.9
