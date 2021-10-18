@@ -60,8 +60,8 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
     # Shared mapping for format constructor (environment and system variables)
     _format_mapping_system: Mapping[str, str] = {
-        'path_user': os.path.expanduser('~'),
-        'path_temp': tempfile.gettempdir(),
+        'user_path': os.path.expanduser('~'),
+        'temp_path': tempfile.gettempdir(),
         'system_hostname': socket.getfqdn(),
         'system_username': getpass.getuser(),
         **{'env_' + env_var: env_val for env_var, env_val in os.environ.items()}
