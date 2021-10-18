@@ -244,7 +244,8 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
         with open(include_path_real) as f:
             # Include from specified path, inheriting restricted paths
-            include_data = yaml.load(f, ExtendedLoader.factory(self._enable_resolve, self._include_paths))
+            include_data = yaml.load(f, ExtendedLoader.factory(self._enable_resolve, self._include_paths,
+                                                               self._format_kwargs))
 
             return include_data
 
