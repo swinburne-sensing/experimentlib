@@ -108,7 +108,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
         format_mapping = {
             'date': timestamp.strftime(constant.FORMAT_DATE),
-            'date_utc':timestamp_utc.strftime(constant.FORMAT_DATE),
+            'date_utc': timestamp_utc.strftime(constant.FORMAT_DATE),
             'time': timestamp.strftime(constant.FORMAT_TIME),
             'time_utc': timestamp_utc.strftime(constant.FORMAT_TIME),
             'datetime': timestamp.strftime(constant.FORMAT_TIMESTAMP_FILENAME),
@@ -170,6 +170,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
 
         if node[0] not in os.environ:
             if len(node) == 1:
+                # Return nothing when no default is provided
                 return None
             elif len(node) == 2:
                 return node[1]

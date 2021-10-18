@@ -52,7 +52,7 @@ class PushoverHandler(logging.Handler):
         logging.CRITICAL: Priority.HIGH
     }
 
-    def __init__(self, api_token: str, user_key: str, level: int = logging.NOTSET,
+    def __init__(self, api_token: Optional[str], user_key: str, level: int = logging.NOTSET,
                  priority_map: MutableMapping[int, Union[int, Priority]] = None,
                  title: Optional[str] = None):
         """
@@ -86,8 +86,11 @@ class PushoverHandler(logging.Handler):
         self._title = title or get_args()
 
         # Instantiate client and test connection
-        self._client = pushover.Pushover(api_token)
+        self._client: Optional[pushover.Pushover] = None
         self._user_key = user_key
+
+        if api_token is not None and len(api_token) > 0 and self._user_key is not None and len(self._user_key) > 0:
+            self._client = pushover.Pushover(api_token)
 
         # Verify user key (does not verify API key)
         # self._client.verify()
@@ -96,6 +99,10 @@ class PushoverHandler(logging.Handler):
         raise NotImplementedError('Formatter cannot be changed')
 
     def emit(self, record: logging.LogRecord) -> None:
+        if self._client is None:
+            # Skip is API token is not configured
+            return
+
         # Format record
         msg = self.format(record)
 
