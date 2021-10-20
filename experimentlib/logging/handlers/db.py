@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import collections
+import collections.abc
 import logging
 import socket
 from enum import IntEnum
@@ -97,7 +97,7 @@ class InfluxDBHandler(logging.Handler):
         # Setup bucket mapping
         self._bucket_map: MutableMapping[int, str] = {}
 
-        if isinstance(bucket, collections.Mapping):
+        if isinstance(bucket, collections.abc.Mapping):
             for k, v in bucket.items():
                 self._bucket_map[getattr(levels, k)] = v
         else:
