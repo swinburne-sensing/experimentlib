@@ -55,7 +55,7 @@ class ResolveTagError(ConstructorError):
     pass
 
 
-class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
+class ExtendedLoader(classes.Logged, yaml.SafeLoader):
     """ An extended YAML loader including additional tags and security features. """
 
     # Shared mapping for format constructor (environment and system variables)
@@ -76,7 +76,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
             self._stream_root = None
             stream_filename = '<str>'
 
-        classes.LoggedClass.__init__(self, f"src:{stream_filename}")
+        classes.Logged.__init__(self, f"src:{stream_filename}")
         yaml.SafeLoader.__init__(self, stream)
 
         # Flag to allow resolving of objects
@@ -229,7 +229,7 @@ class ExtendedLoader(classes.LoggedClass, yaml.SafeLoader):
             include_path_real = os.path.realpath(include_path_formatted)
 
             if os.path.isfile(include_path_real):
-                self.logger().info(f"Including: {include_path_real}")
+                self.logger().debug(f"Including: {include_path_real}")
                 break
             else:
                 self.logger().debug(f"File not found: {include_path_real}")

@@ -8,17 +8,22 @@ from typing import Any, Mapping, MutableMapping, Optional, Union
 
 import urllib3
 from influxdb_client import InfluxDBClient, Point, WritePrecision
-from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
+from influxdb_client.client.write_api import PointSettings
 
+import experimentlib
 from experimentlib.logging import levels
 from experimentlib.logging.filters import discard_name_prefix_factory
 from experimentlib.logging.formatters import InfluxDBFormatter
 from experimentlib.util.arg_helper import get_args
 
 
+class InfluxDBHandlerError(experimentlib.ExperimentLibError):
+    pass
+
+
 class InfluxDBHandler(logging.Handler):
     # HTTP options
-    RETRIES = urllib3.Retry(redirect=3, backoff_factor=1)
+    RETRIES = urllib3.Retry(3, redirect=3, backoff_factor=1)
 
     # Log keywords (syslog compatible)
     FACILITY_CODE = 14
@@ -125,9 +130,16 @@ class InfluxDBHandler(logging.Handler):
         else:
             self._client = InfluxDBClient(**client_args, retries=self.RETRIES)
 
-        self._write_api = self._client.write_api(ASYNCHRONOUS, self._point_settings)
+        health = self._client.health()
 
-    def __del__(self):
+        if health.status != 'pass':
+            raise InfluxDBHandlerError(f"Health check failed with message: {health.message}")
+
+        self._write_api = self._client.write_api(point_settings=self._point_settings)
+
+    def close(self) -> None:
+        super().close()
+
         # Ensure client is closed on deletion
         if hasattr(self, '_write_api'):
             self._write_api.close()

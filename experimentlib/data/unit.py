@@ -4,13 +4,15 @@ from datetime import timedelta
 
 import pint
 
+import experimentlib
+
 try:
     import pint_pandas
 except ImportError:
     pint_pandas = None
 
 
-class QuantityParseError(Exception):
+class QuantityParseError(experimentlib.ExperimentLibError):
     pass
 
 

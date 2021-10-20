@@ -5,7 +5,7 @@ import re
 
 class InfluxDBFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
-        lines = [record.message.strip()]
+        lines = [record.getMessage().strip()]
 
         if record.exc_info:
             lines.extend([''] + self.formatException(record.exc_info).split('\n'))
@@ -20,7 +20,7 @@ class PushoverFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         msg_lines = [
-            record.message.strip(),
+            record.getMessage().strip(),
             '',
             f"<b>Logger:</b> {record.name}",
             f"<b>Level:</b> {record.levelname}",

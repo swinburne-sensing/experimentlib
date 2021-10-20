@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from experimentlib.logging import classes
 
 
-class TimeoutLock(classes.LoggedClass):
+class TimeoutLock(classes.Logged):
     def __init__(self, interval: typing.Union[float, timedelta], name: typing.Optional[str] = None):
-        classes.LoggedClass.__init__(self, name)
+        classes.Logged.__init__(self, name)
 
         self._interval = interval
 

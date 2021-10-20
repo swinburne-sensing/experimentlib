@@ -1,9 +1,12 @@
 import functools
+import inspect
 import typing
 import sys
 
+import experimentlib
 
-class InstanceError(Exception):
+
+class InstanceError(experimentlib.ExperimentLibError):
     pass
 
 
@@ -27,6 +30,33 @@ class HybridMethod(object):
         hybrid.__self__ = hybrid.im_self = context
 
         return hybrid
+
+
+def __recurse_subclasses(subclass_list):
+    return_list = []
+
+    for subclass in subclass_list:
+        if len(subclass.__subclasses__()) > 0:
+            return_list.extend(__recurse_subclasses(subclass.__subclasses__()))
+
+            if not inspect.isabstract(subclass):
+                return_list.append(subclass)
+        else:
+            return_list.append(subclass)
+
+    return return_list
+
+
+T_OBJECT = typing.TypeVar('T_OBJECT', bound=object)
+
+
+def get_subclasses(class_root: typing.Type[T_OBJECT]) -> typing.List[typing.Type[T_OBJECT]]:
+    """ Get a list of subclasses for a given parent class.
+
+    :param class_root: parent class type
+    :return: list
+    """
+    return __recurse_subclasses([class_root])
 
 
 def reference_from_str(name: str, parent: typing.Any):

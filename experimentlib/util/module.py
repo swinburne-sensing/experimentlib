@@ -1,34 +1,33 @@
 import importlib
 import inspect
 import pkgutil
-import typing
+from typing import List
 
 
-def __recurse_subclasses(subclass_list):
-    return_list = []
+def get_call_context(root_module: str, discard_calls: int = 1, filter_app: bool = True) -> List[str]:
+    """ Get a list of contextual calls in the stack.
 
-    for subclass in subclass_list:
-        if len(subclass.__subclasses__()) > 0:
-            return_list.extend(__recurse_subclasses(subclass.__subclasses__()))
-
-            if not inspect.isabstract(subclass):
-                return_list.append(subclass)
-        else:
-            return_list.append(subclass)
-
-    return return_list
-
-
-T_OBJECT = typing.TypeVar('T_OBJECT', bound=object)
-
-
-def get_subclasses(class_root: typing.Type[T_OBJECT]) -> typing.List[typing.Type[T_OBJECT]]:
-    """ Get a list of subclasses for a given parent class.
-
-    :param class_root: parent class type
+    :param root_module:
+    :param discard_calls: number of stacks calls to discard (0 would include call to this method)
+    :param filter_app: if True only calls to methods in this application (no external modules or built-ins)
     :return: list
     """
-    return __recurse_subclasses([class_root])
+    context = inspect.stack()
+    context_list = []
+
+    # Filter stack frames from this application
+    if filter_app:
+        context = [x for x in context[discard_calls:] if x[1].startswith(root_module)]
+
+    for frame in context:
+        frame_path = frame[1]
+
+        if filter_app:
+            frame_path = frame_path[len(root_module):]
+
+        context_list.append(f"{frame_path}:{frame[3]}:{frame[2]}")
+
+    return context_list
 
 
 def import_submodules(package, recursive=True):
@@ -40,13 +39,10 @@ def import_submodules(package, recursive=True):
     if isinstance(package, str):
         package = importlib.import_module(package)
 
-    results = {}
-
     for loader, name, is_pkg in pkgutil.walk_packages(package.__path__):
         full_name = package.__name__ + '.' + name
 
-        results[full_name] = importlib.import_module(full_name)
-        if recursive and is_pkg:
-            results.update(import_submodules(full_name))
+        importlib.import_module(full_name)
 
-    return results
+        if recursive and is_pkg:
+            import_submodules(full_name)

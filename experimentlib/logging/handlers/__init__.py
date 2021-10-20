@@ -4,6 +4,7 @@ import atexit
 import logging
 import logging.handlers
 import queue as queue_lib
+import threading
 
 import time
 import typing
@@ -57,20 +58,27 @@ class BufferedHandler(logging.Handler):
         self._record_timeout = record_timeout
 
         self._record_buffer: typing.List[logging.LogRecord] = []
+        self._record_lock = threading.RLock()
 
     def emit(self, record: logging.LogRecord) -> None:
-        # Discard old records
-        self._update()
+        with self._record_lock:
+            # Discard old records
+            self._update()
 
-        # Append record to buffer
-        self._record_buffer.append(record)
+            # Append record to buffer
+            self._record_buffer.append(record)
+
+    def flush(self) -> None:
+        with self._record_lock:
+            self._record_buffer.clear()
 
     @property
-    def records(self) -> typing.FrozenSet[logging.LogRecord]:
-        # Discard old records
-        self._update()
+    def records(self) -> typing.Tuple[logging.LogRecord, ...]:
+        with self._record_lock:
+            # Discard old records
+            self._update()
 
-        return frozenset(self._record_buffer)
+            return tuple(self._record_buffer)
 
     def _update(self):
         """ Discard records beyond the configured record count limit and/or configures record timeout.

@@ -2,6 +2,15 @@ from typing import Any, Iterable, Sequence
 from itertools import tee
 
 
+def flatten_list(iterable: Iterable[Any]):
+    for item in iterable:
+        if isinstance(item, list) or isinstance(item, tuple) or isinstance(item, set):
+            for sub_item in flatten_list(item):
+                yield sub_item
+        else:
+            yield item
+
+
 def iterate_chunk(data: Sequence[Any], size: int):
     """ Get iterator to return portions of a sequence in chunks of a maximum size.
 

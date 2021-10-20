@@ -126,7 +126,7 @@ class ExtendedLogger(logging.Logger):
             self._update_kwargs(notify, event, kwargs)
             self._log(INFO, msg, args, **kwargs)
 
-    def warning(self, msg: str, *args, notify: bool = True, event: bool = False, **kwargs):
+    def warning(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs):
         if self.isEnabledFor(WARNING):
             self._update_kwargs(notify, event, kwargs)
             self._log(WARNING, msg, args, **kwargs)
@@ -170,6 +170,7 @@ def basic_logging(filename: typing.Optional[str] = None, suppress_suggested: boo
                   include_process: bool = False, **kwargs):
     """ Wrapper for standard basic logging that uses a colourised console stream by default.
 
+    :param filename:
     :param suppress_suggested: if True some recommended loggers will be raised to the INFO level to reduce log spam
     :param include_thread:
     :param include_process:
