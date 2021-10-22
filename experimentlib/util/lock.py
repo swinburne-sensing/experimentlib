@@ -102,7 +102,7 @@ class IntervalLock(classes.Logged):
         self._lock = LoggedThreadLock(name, False)
 
     @contextlib.contextmanager
-    def interval(self, minimum_delay: typing.Optional[unit.TYPE_PARSE_VALUE]):
+    def interval(self, minimum_delay: typing.Optional[unit.T_PARSE_QUANTITY]):
         if minimum_delay is not None:
             minimum_delay = unit.parse_timedelta(minimum_delay)
 

@@ -56,9 +56,9 @@ class GasProperties(storage.RegistryEntry):
 
     # Chemical properties
     molecular_structure: MolecularStructure = attr.ib(default=None, kw_only=True)
-    specific_heat: Union[unit.TYPE_PARSE_VALUE, unit.Quantity] = attr.ib(
+    specific_heat: Union[unit.T_PARSE_QUANTITY, unit.Quantity] = attr.ib(
         converter=unit.converter(unit.registry.cal / unit.registry.g, True), default=None, kw_only=True)
-    density: Union[unit.TYPE_PARSE_VALUE, unit.Quantity] = attr.ib(
+    density: Union[unit.T_PARSE_QUANTITY, unit.Quantity] = attr.ib(
         converter=unit.converter(unit.registry.g / unit.registry.L, True), default=None, kw_only=True)
 
     # Inert gas flag
@@ -307,7 +307,7 @@ registry = storage.Registry([
 @attr.s(frozen=True)
 class Component(object):
     # Actual concentration
-    quantity: Union[unit.TYPE_PARSE_VALUE, unit.Quantity] = attr.ib(converter=unit.converter())
+    quantity: Union[unit.T_PARSE_QUANTITY, unit.Quantity] = attr.ib(converter=unit.converter())
 
     # Gas type
     properties: GasProperties = attr.ib()
