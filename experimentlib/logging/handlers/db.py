@@ -142,6 +142,7 @@ class InfluxDBHandler(logging.Handler):
 
         # Ensure client is closed on deletion
         if hasattr(self, '_write_api'):
+            self._write_api.flush()
             self._write_api.close()
 
         if hasattr(self, '_client'):
