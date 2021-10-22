@@ -237,6 +237,10 @@ def parse_timedelta(x: T_PARSE_TIMEDELTA) -> timedelta:
     :param x:
     :return:
     """
+    if isinstance(x, timedelta):
+        # Already a timedelta
+        return x
+
     x_unit = parse(x)
 
     if x_unit.dimensionless:
