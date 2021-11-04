@@ -17,12 +17,12 @@ class QuantityParseError(experimentlib.ExperimentLibError):
 
 
 # Handler for percent sign
-def _handle_percent(x):
-    return x.replace('%', 'pct')
+def _handle_symbols(x):
+    return x.replace('%', 'pct').replace('μ', 'u')
 
 
 # Unit registry
-registry = pint.UnitRegistry(autoconvert_offset_to_baseunit=True, preprocessors=[_handle_percent])
+registry = pint.UnitRegistry(autoconvert_offset_to_baseunit=True, preprocessors=[_handle_symbols])
 
 
 # Hack to make Quantity objects pickle-able by fixing implementation used in registry
