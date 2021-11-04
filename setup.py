@@ -29,7 +29,7 @@ for n, requirement in enumerate(requirements):
     match_requirement = _RE_URL_DEPENDENCY.match(requirement)
 
     if match_requirement is not None:
-        requirements[n] = match_requirement[1] + ' @ ' + requirement
+        requirements[n] = match_requirement.group(1) + ' @ ' + requirement
 
 
 setup(
