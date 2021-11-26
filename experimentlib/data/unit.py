@@ -200,7 +200,8 @@ def parse(x: T_PARSE_QUANTITY, to_unit: typing.Optional[T_PARSE_UNIT] = None, ma
     if to_unit is not None:
         if not x.unitless:
             try:
-                x.ito(to_unit)
+                # Don't use in-place change, can mess up values passed to some methods
+                x = x.to(to_unit)
             except pint.errors.DimensionalityError as ex:
                 raise QuantityParseError(f"Unable to convert parsed quantity {x!s} to unit {to_unit}") from ex
         else:

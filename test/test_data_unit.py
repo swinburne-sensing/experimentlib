@@ -114,6 +114,10 @@ class TestDataUnit(unittest.TestCase):
     def test_time(self):
         self.assertEqual(str(unit.parse(1000, 's')), '1000 s')
 
+    def test_round(self):
+        self.assertEqual(str(unit.parse('200.001 sccm', mag_round=2)), '200 sccm')
+        self.assertEqual(str(unit.parse('200.1 sccm', mag_round=0)), '200 sccm')
+
 
 if __name__ == '__main__':
     unittest.main()
