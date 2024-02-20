@@ -27,11 +27,7 @@ class MixingError(GasError):
     pass
 
 
-class ParserError(GasError):
-    pass
-
-
-class UnknownGas(ParserError):
+class UnknownGas(GasError):
     pass
 
 
