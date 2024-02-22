@@ -76,10 +76,10 @@ class TestDataGas(unittest.TestCase):
         ]
 
         for gas_str, gas_mix in gas_str_list:
-            gas_parse = gas.Mixture.from_str(gas_str)
+            with self.subTest(gas_str=gas_str):
+                gas_parse = gas.Mixture.from_str(gas_str)
 
-            self.assertSequenceEqual(gas_parse.components, gas_mix.components)
-            self.assertTrue(gas_parse.balance == gas_mix.balance)
+                self.assertEqual(gas_parse, gas_mix)
 
     def test_parsing_unknown(self):
         with self.assertRaises(gas.UnknownGas):

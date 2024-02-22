@@ -309,11 +309,16 @@ registry = storage.Registry([
 ])
 
 
+def _quantity_mag_rounded(x: unit.Quantity) -> float:
+    return round(x.m_as(unit.dimensionless), 12)
+
+
 @attr.s(frozen=True)
 class Component(object):
     # Actual concentration
     quantity: unit.Quantity = attr.ib(
-        converter=unit.converter()
+        converter=unit.converter(),
+        eq=_quantity_mag_rounded
     )
 
     # Gas type
@@ -342,7 +347,7 @@ class Component(object):
     def gcf(self) -> float:
         return (0.3106 * self.properties.molecular_structure.value /
                 (self.properties.density * self.properties.specific_heat)).magnitude
-
+    
     def __rmul__(self, other):
         return Component(other * self.quantity, self.properties)
 
