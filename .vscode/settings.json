@@ -1,0 +1,14 @@
+{
+    "mypy.runUsingActiveInterpreter": true,
+    "mypy.targets": [
+        "experimentlib"
+    ],
+    "mypy.extraArguments": [
+        "--ignore-missing-imports"
+    ],
+    "python.testing.pytestArgs": [
+        "test"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}
