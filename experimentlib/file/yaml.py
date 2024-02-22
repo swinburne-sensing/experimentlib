@@ -36,7 +36,7 @@ class ConstructorError(ExtendedError):
         else:
             msg = msg.strip() + f" from {source}, line {node.start_mark.line + 1}"
 
-        ExtendedError.__init__(self, msg)
+        super().__init__(msg)
 
 
 class EnvironmentTagError(ConstructorError):
@@ -70,7 +70,10 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
     def __init__(self, stream: Union[str, IO], enable_resolve: bool = False,
                  include_paths: Optional[Iterable[str]] = None,
                  format_kwargs: Optional[Mapping[str, str]] = None):
-        if type(stream) is not str:
+        self._stream_root: Optional[str]
+        stream_filename: str
+
+        if isinstance(stream, IO):
             self._stream_root, stream_filename = os.path.split(stream.name)
         else:
             self._stream_root = None

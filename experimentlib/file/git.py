@@ -26,6 +26,9 @@ def get_git_hash(path: typing.Optional[str] = None, length: typing.Optional[int]
         frame = inspect.stack()[1]
         module = inspect.getmodule(frame[0])
 
+        assert module is not None
+        assert module.__file__ is not None
+
         path, _ = os.path.split(module.__file__)
 
     try:
@@ -37,14 +40,13 @@ def get_git_hash(path: typing.Optional[str] = None, length: typing.Optional[int]
     # Read output from process
     (git_process_out, git_process_err) = git_process.communicate()
 
-    # Decode output
-    git_process_out = git_process_out.decode().strip()
-    git_process_err = git_process_err.decode().strip()
-
     if len(git_process_err) > 0:
-        raise GitError(f"git binary returned error while reading hash: \"{git_process_err}\"")
+        raise GitError(f"git binary returned error while reading hash: {git_process_err!r}")
+
+    # Decode output
+    git_process_out_str = git_process_out.decode().strip()
 
     if length:
-        return git_process_out[:length]
+        return git_process_out_str[:length]
     else:
-        return git_process_out
+        return git_process_out_str

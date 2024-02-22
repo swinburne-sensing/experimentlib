@@ -79,12 +79,12 @@ def abs_to_rel(temperature: _TYPE_INPUT, absolute_humidity: _TYPE_INPUT) -> unit
     :param absolute_humidity: water concentration in gas
     :return: relative humidity percentage as Quantity
     """
-    temperature = unit.parse(temperature, unit.registry.degC).to(unit.registry.degK)
-    absolute_humidity = unit.parse(absolute_humidity, unit_abs)
+    temperature_qty = unit.parse(temperature, unit.registry.degC).to(unit.registry.degK)
+    absolute_humidity_qty = unit.parse(absolute_humidity, unit_abs)
 
-    pw = temperature * absolute_humidity / _HUMID_ABS_C
+    pw = temperature_qty * absolute_humidity_qty / _HUMID_ABS_C
 
-    return unit.Quantity((pw / _humidity_calc_pws_exp(temperature)).magnitude, unit_rel)
+    return unit.Quantity((pw / _humidity_calc_pws_exp(temperature_qty)).magnitude, unit_rel)
 
 
 # Calculate absolute humidity from dew point

@@ -8,12 +8,14 @@ from experimentlib.data import unit
 from experimentlib.logging import classes
 
 
-class LoggedThreadLock(classes.Logged, contextlib.AbstractContextManager):
+class LoggedThreadLock(classes.LoggedAbstract, contextlib.AbstractContextManager):
     def __init__(self, name: typing.Optional[str] = None, reenterant: bool = True):
         classes.Logged.__init__(self, name)
         contextlib.AbstractContextManager.__init__(self)
 
         self._reenterant = reenterant
+
+        self._lock: typing.Union[threading.Lock, threading.RLock]
 
         if self._reenterant:
             self._lock = threading.RLock()
@@ -25,7 +27,7 @@ class LoggedThreadLock(classes.Logged, contextlib.AbstractContextManager):
 
     def _get_owner(self) -> typing.Optional[threading.Thread]:
         if self._owner:
-            if not self._owner.isAlive():
+            if not self._owner.is_alive():
                 self.logger().error('Lock owner no longer alive')
                 self._owner = None
 
@@ -104,7 +106,9 @@ class IntervalLock(classes.Logged):
     @contextlib.contextmanager
     def interval(self, minimum_delay: typing.Optional[unit.T_PARSE_QUANTITY]):
         if minimum_delay is not None:
-            minimum_delay = unit.parse_timedelta(minimum_delay)
+            minimum_delay_dt = unit.parse_timedelta(minimum_delay)
+        else:
+            minimum_delay_dt = None
 
         self._lock.acquire()
 
@@ -120,8 +124,8 @@ class IntervalLock(classes.Logged):
             yield
         finally:
             # Save exit time
-            if minimum_delay is not None:
-                self._interval_timeout = datetime.now() + minimum_delay
+            if minimum_delay_dt is not None:
+                self._interval_timeout = datetime.now() + minimum_delay_dt
 
             self._lock.release()
 

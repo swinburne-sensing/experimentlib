@@ -102,14 +102,14 @@ def resolve_global(name: str) -> typing.Any:
     :return:
     """
     # Split name
-    name = name.split('.')
+    name_seg = name.split('.')
 
     # Find root object
-    obj_name = name.pop(0)
+    obj_name = name_seg.pop(0)
     obj = __import__(obj_name)
 
-    while len(name) > 0:
-        attr_name = name.pop(0)
+    while len(name_seg) > 0:
+        attr_name = name_seg.pop(0)
         obj_name = obj_name + '.' + attr_name
 
         try:

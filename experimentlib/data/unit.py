@@ -35,7 +35,7 @@ registry.Quantity = Quantity
 
 # Shorthand
 # Quantity = registry.Quantity
-Unit = registry.Unit
+Unit: typing.Type[pint.Unit] = registry.Unit
 
 # Change default printing format
 registry.default_format = '.3g~P#'
@@ -70,8 +70,9 @@ if pint_pandas is not None:
 
 
 # Decorate Quantity formatter to catch printing dimensionless units
-def _quantity_format_decorator(format_method):
-    def format_decorator(self: Quantity, spec):
+def _quantity_format_decorator(format_method: typing.Callable[[Quantity, str], str]) \
+        -> typing.Callable[[Quantity, str], str]:
+    def format_decorator(self: Quantity, spec: str) -> str:
         spec = spec or self.default_format
 
         if self.units in (registry.pct, registry.ppm, registry.ppb):
@@ -124,8 +125,9 @@ def _quantity_format_decorator(format_method):
     return format_decorator
 
 
-def _unit_format_decorator(format_method):
-    def format_decorator(self, spec):
+def _unit_format_decorator(format_method: typing.Callable[[pint.Unit, str], str]) \
+        -> typing.Callable[[pint.Unit, str], str]:
+    def format_decorator(self, spec: str) -> str:
         unit_str = format_method(self, spec)
 
         if unit_str.endswith('pct'):
@@ -136,17 +138,17 @@ def _unit_format_decorator(format_method):
     return format_decorator
 
 
-Quantity.__format__ = _quantity_format_decorator(Quantity.__format__)
-Unit.__format__ = _unit_format_decorator(Unit.__format__)
+Quantity.__format__ = _quantity_format_decorator(Quantity.__format__)  # type: ignore
+Unit.__format__ = _unit_format_decorator(Unit.__format__)  # type: ignore
 
 
 # Type hints
 T_PARSE_QUANTITY = typing.Union[Quantity, str, float, int]
-T_PARSE_UNIT = typing.Union[Unit, Quantity, str]
-T_PARSE_TIMEDELTA = typing.Union[timedelta, Quantity, str]
+T_PARSE_UNIT = typing.Union[pint.Unit, Quantity, str]
+T_PARSE_TIMEDELTA = typing.Union[timedelta, Quantity, int, float, str]
 
 
-def parse_unit(x: T_PARSE_UNIT) -> Unit:
+def parse_unit(x: T_PARSE_UNIT) -> pint.Unit:
     """ Parse arbitrary input to a Unit from the registry.
 
     :param x: input str
@@ -192,26 +194,28 @@ def parse(x: T_PARSE_QUANTITY, to_unit: typing.Optional[T_PARSE_UNIT] = None, ma
 
         # Convert floats (and ints) to Quantity, attempt to directly parse strings
         if isinstance(x, float) or isinstance(x, str):
-            x = Quantity(x)
+            x_qty = Quantity(x)
         else:
             raise QuantityParseError(f"Unsupported input type \"{type(x)}\"")
+    else:
+        x_qty = x
 
     # Attempt conversion
     if to_unit is not None:
-        if not x.unitless:
+        if not x_qty.unitless:
             try:
                 # Don't use in-place change, can mess up values passed to some methods
-                x = x.to(to_unit)
+                x_qty = x_qty.to(to_unit)
             except pint.errors.DimensionalityError as ex:
-                raise QuantityParseError(f"Unable to convert parsed quantity {x!s} to unit {to_unit}") from ex
+                raise QuantityParseError(f"Unable to convert parsed quantity {x_qty!s} to unit {to_unit}") from ex
         else:
-            x = Quantity(x.m_as(dimensionless), to_unit)
+            x_qty = Quantity(x_qty.m_as(dimensionless), to_unit)
 
     if mag_round is not None:
         # Round resulting value
-        x = round(x, mag_round)
+        x_qty = round(x_qty, mag_round)
 
-    return x
+    return x_qty
 
 
 def parse_magnitude(x: T_PARSE_QUANTITY, magnitude_unit: T_PARSE_UNIT,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from enum import IntEnum
 from json import JSONDecodeError
-from typing import Mapping, MutableMapping, Optional, Union
+from typing import Mapping, MutableMapping, Optional, Union, cast
 
 import tenacity
 import pushover
@@ -53,7 +53,7 @@ class PushoverHandler(logging.Handler):
     }
 
     def __init__(self, api_token: Optional[str], user_key: str, level: int = logging.NOTSET,
-                 priority_map: MutableMapping[int, Union[int, Priority]] = None,
+                 priority_map: Optional[MutableMapping[int, Union[int, Priority]]] = None,
                  title: Optional[str] = None):
         """
 
@@ -77,7 +77,7 @@ class PushoverHandler(logging.Handler):
                 if isinstance(v, int):
                     priority_map[k] = PushoverHandler.Priority(v)
 
-        self._priority_map = priority_map or self._DEFAULT_PRIORITY_MAP
+        self._priority_map = cast(Mapping[int, PushoverHandler.Priority], priority_map) or self._DEFAULT_PRIORITY_MAP
 
         # Minimum and maximum supported priority
         self._priority_min = min(self._priority_map.keys())
@@ -95,7 +95,7 @@ class PushoverHandler(logging.Handler):
         # Verify user key (does not verify API key)
         # self._client.verify()
 
-    def setFormatter(self, fmt: logging.Formatter) -> None:
+    def setFormatter(self, fmt: Optional[logging.Formatter]) -> None:
         raise NotImplementedError('Formatter cannot be changed')
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -117,11 +117,15 @@ class PushoverHandler(logging.Handler):
 
         # Send message to Pushover client (with retrying and rate limiting)
         try:
-            self._send_message(msg, priority.value, title, record.created, True)
+            self._send_message(msg, priority.value, title, int(record.created), True)
         except pushover.RequestError:
             self.handleError(record)
 
     @tenacity.retry(retry=_RetryPushoverError(), stop=tenacity.stop_after_delay(600),
                     wait=tenacity.wait_fixed(30))
-    def _send_message(self, msg: str, priority: int, title: str, timestamp: int, html: bool):
+    def _send_message(self, msg: str, priority: int, title: str, timestamp: int, html: bool) -> None:
+        if self._client is None:
+            # Skip is API token is not configured
+            return
+
         self._client.message(self._user_key, msg, priority=priority, title=title, timestamp=timestamp, html=int(html))

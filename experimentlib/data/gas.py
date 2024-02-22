@@ -51,11 +51,20 @@ class GasProperties(storage.RegistryEntry):
     symbol: Optional[str] = attr.ib(default=None)
 
     # Chemical properties
-    molecular_structure: MolecularStructure = attr.ib(default=None, kw_only=True)
-    specific_heat: Union[unit.T_PARSE_QUANTITY, unit.Quantity] = attr.ib(
-        converter=unit.converter(unit.registry.cal / unit.registry.g, True), default=None, kw_only=True)
-    density: Union[unit.T_PARSE_QUANTITY, unit.Quantity] = attr.ib(
-        converter=unit.converter(unit.registry.g / unit.registry.L, True), default=None, kw_only=True)
+    molecular_structure: MolecularStructure = attr.ib(
+        default=None,
+        kw_only=True
+    )
+    specific_heat: unit.Quantity = attr.ib(
+        converter=unit.converter(unit.registry.cal / unit.registry.g, True),
+        default=None,
+        kw_only=True
+    )
+    density: unit.Quantity = attr.ib(
+        converter=unit.converter(unit.registry.g / unit.registry.L, True),
+        default=None,
+        kw_only=True
+    )
 
     # Inert gas flag
     inert: bool = attr.ib(default=False, kw_only=True)
@@ -303,7 +312,9 @@ registry = storage.Registry([
 @attr.s(frozen=True)
 class Component(object):
     # Actual concentration
-    quantity: Union[unit.T_PARSE_QUANTITY, unit.Quantity] = attr.ib(converter=unit.converter())
+    quantity: unit.Quantity = attr.ib(
+        converter=unit.converter()
+    )
 
     # Gas type
     properties: GasProperties = attr.ib()
@@ -476,7 +487,7 @@ class Mixture(object):
         :param gas_mapping:
         :return:
         """
-        balance = None
+        balance: Optional[GasProperties] = None
         components = []
 
         for gas_name, concentration in gas_mapping.items():
@@ -484,13 +495,16 @@ class Mixture(object):
             gas = registry[gas_name]
 
             # Parse concentration
-            if concentration.lower() == 'balance' or concentration is None:
+            if concentration.strip().lower() == 'balance' or concentration is None:
                 if balance is not None:
                     raise GasError('Multiple balance gases specified')
 
                 balance = gas
             else:
                 components.append(Component(concentration, gas))
+        
+        if balance is None:
+            raise GasError('Balance gas not specified in mixture')
 
         return cls.auto_balance(components, balance)
 

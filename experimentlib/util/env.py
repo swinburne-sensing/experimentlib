@@ -21,8 +21,9 @@ def get_variables(prefix: str, cast_bool: typing.Optional[typing.Iterable[str]] 
     :return: dict of environment variables
     """
     # Get arguments from environment
-    env_vars = {k[len(prefix):].lower(): v for k, v in os.environ.items() if
-                k.startswith(prefix)}
+    env_vars: typing.Dict[str, typing.Union[bool, float, int, str]] = {
+        k[len(prefix):].lower(): v for k, v in os.environ.items() if k.startswith(prefix)
+    }
 
     # Discard any ignored variables
     if var_ignore:

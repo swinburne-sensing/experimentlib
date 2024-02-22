@@ -15,31 +15,24 @@ CRITICAL = logging.CRITICAL
 
 # Additional logging levels
 # Logging about logging
-logging.META = logging.NOTSET + 1
+setattr(logging, 'META', logging.NOTSET + 1)
 # Logging lock acquisition/release
-logging.LOCK = logging.DEBUG - 2
+setattr(logging, 'LOCK', logging.DEBUG - 2)
 # Logging for detailed debugging
-logging.TRACE = logging.DEBUG - 1
+setattr(logging, 'TRACE', logging.DEBUG - 1)
 # Logging external I/O
-logging.COMM = logging.DEBUG + 1
+setattr(logging, 'COMM', logging.DEBUG + 1)
 
 # noinspection PyUnresolvedReferences
-logging.addLevelName(logging.META, 'META')
-# noinspection PyUnresolvedReferences
-logging.addLevelName(logging.LOCK, 'LOCKS')
-# noinspection PyUnresolvedReferences
-logging.addLevelName(logging.TRACE, 'TRACE')
-# noinspection PyUnresolvedReferences
-logging.addLevelName(logging.COMM, 'COMM')
+logging.addLevelName(logging.META, 'META')  # type: ignore
+logging.addLevelName(logging.LOCK, 'LOCKS')  # type: ignore
+logging.addLevelName(logging.TRACE, 'TRACE')  # type: ignore
+logging.addLevelName(logging.COMM, 'COMM')  # type: ignore
 
-# noinspection PyUnresolvedReferences
-META = logging.META
-# noinspection PyUnresolvedReferences
-LOCK = logging.LOCK
-# noinspection PyUnresolvedReferences
-TRACE = logging.TRACE
-# noinspection PyUnresolvedReferences
-COMM = logging.COMM
+META = logging.META  # type: ignore
+LOCK = logging.LOCK  # type: ignore
+TRACE = logging.TRACE  # type: ignore
+COMM = logging.COMM  # type: ignore
 
 
 NAME_TO_LEVEL = {

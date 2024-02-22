@@ -7,7 +7,7 @@ import sys
 import typing
 from datetime import datetime, tzinfo
 from types import SimpleNamespace
-from typing import Any, Callable, Optional, Mapping, Sequence, Union
+from typing import Any, Callable, Optional, MutableMapping, Sequence, Union
 
 import attr
 from tzlocal import get_localzone
@@ -227,7 +227,7 @@ def parse_path(value: str) -> str:
 
 
 def parse_pair(value: str, value_separator: Optional[str] = None,
-               list_delimiter: Optional[str] = None, escape: bool = True) -> Mapping[str, str]:
+               list_delimiter: Optional[str] = None, escape: bool = True) -> MutableMapping[str, str]:
     """ Parse key-value pairs from string input.
 
     :param value: input str
@@ -247,7 +247,11 @@ def parse_pair(value: str, value_separator: Optional[str] = None,
 
         # Merge recursive call results
         try:
-            return dict(collections.ChainMap(*(parse_pair(pair, value_separator, escape=escape) for pair in pair_set)))
+            return dict(
+                collections.ChainMap(
+                    *(parse_pair(pair, value_separator, escape=escape) for pair in pair_set)
+                )
+            )
         except PairParseError:
             raise PairParseError()
 

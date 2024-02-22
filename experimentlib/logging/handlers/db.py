@@ -67,10 +67,10 @@ class InfluxDBHandler(logging.Handler):
         logging.CRITICAL: Severity.CRITICAL
     }
 
-    def __init__(self, bucket: Union[str, Mapping[int, str]], name: Optional[str] = None,
+    def __init__(self, bucket: Union[str, Mapping[str, str]], name: Optional[str] = None,
                  client_args: Optional[Mapping[str, Any]] = None, level: int = logging.NOTSET,
                  measurement: Optional[str] = None,
-                 severity_map: Mapping[int, Union[int, Severity]] = None):
+                 severity_map: Optional[Mapping[int, Union[int, Severity]]] = None):
         """ Sends logs to an InfluxDB instance in a format compatible with InfluxDBs log view. Can be configured to
         alter severity levels and send different log levels to specific buckets, allowing culling of old records.
 
@@ -98,18 +98,20 @@ class InfluxDBHandler(logging.Handler):
         self._bucket_map: MutableMapping[int, str] = {}
 
         if isinstance(bucket, collections.abc.Mapping):
-            for k, v in bucket.items():
-                self._bucket_map[getattr(levels, k)] = v
+            for bucket_level, bucket_name in bucket.items():
+                self._bucket_map[getattr(levels, bucket_level)] = bucket_name
         else:
             self._bucket_map[logging.NOTSET] = str(bucket)
 
         # Setup severity mapping
-        self._severity_map: MutableMapping[int, InfluxDBHandler.Severity] = {}
+        self._severity_map: Mapping[int, InfluxDBHandler.Severity] = {}
 
         if severity_map is not None:
-            for k, v in severity_map.items():
-                if isinstance(v, int):
-                    self._severity_map[k] = InfluxDBHandler.Severity(v)
+            for severity_level, severity_obj in severity_map.items():
+                if isinstance(severity_obj, int):
+                    severity_obj = InfluxDBHandler.Severity(severity_obj)
+                
+                self._severity_map[severity_level] = severity_obj
         else:
             self._severity_map = self._DEFAULT_SEVERITY_MAP
 
@@ -148,7 +150,7 @@ class InfluxDBHandler(logging.Handler):
         if hasattr(self, '_client'):
             self._client.close()
 
-    def setFormatter(self, fmt: logging.Formatter) -> None:
+    def setFormatter(self, fmt: Optional[logging.Formatter]) -> None:
         raise NotImplementedError('InfluxDB formatter cannot be changed, hard-coded to match syslog format')
 
     def emit(self, record: logging.LogRecord) -> None:

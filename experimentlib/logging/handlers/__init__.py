@@ -114,7 +114,6 @@ class QueueListenerHandler(logging.handlers.QueueHandler):
         logging.handlers.QueueHandler.__init__(self, queue)
 
         # Create listener thread
-        # noinspection PyUnresolvedReferences
         self._listener = logging.handlers.QueueListener(self.queue, *handlers,
                                                         respect_handler_level=respect_handler_level)
 

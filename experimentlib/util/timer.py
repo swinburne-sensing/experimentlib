@@ -9,7 +9,10 @@ class TimeoutLock(classes.Logged):
     def __init__(self, interval: typing.Union[float, timedelta], name: typing.Optional[str] = None):
         classes.Logged.__init__(self, name)
 
-        self._interval = interval
+        if isinstance(interval, float):
+            self._interval = timedelta(seconds=interval)
+        else:
+            self._interval = interval
 
         self._lock = threading.RLock()
         self._trigger: typing.Optional[datetime] = None
@@ -20,7 +23,10 @@ class TimeoutLock(classes.Logged):
 
     @interval.setter
     def interval(self, interval: typing.Union[float, timedelta]):
-        pass
+        if isinstance(interval, float):
+            self._interval = timedelta(seconds=interval)
+        else:
+            self._interval = interval
 
     def acquire(self):
         pass

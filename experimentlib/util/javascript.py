@@ -14,7 +14,7 @@ _RE_PAIR_DICT = regex.compile(r'^([\"\w\d_]+)\s*:\s*([^\r\n]+)$')
 
 _RE_PARSE_LIST = regex.compile(r'\[((?>[^\[\]]+|(?R))*)\]')
 
-_RE_PAIR_ASSIGN = re.compile(r'^\s*([\"\w\d_]+)\s*:\s*([^,\r\n]+)[\s,]*$')
+# _RE_PAIR_ASSIGN = re.compile(r'^\s*([\"\w\d_]+)\s*:\s*([^,\r\n]+)[\s,]*$')
 _RE_OBJ_ASSIGN = re.compile(r'^\s*([\w]+)\.([\w\d\[\]]*)\s+=\s+([^;]+);$')
 _RE_VAR_ASSIGN = re.compile(r'\s*var\s+(\w+)\s+=\s+([^;]+);', re.MULTILINE)
 

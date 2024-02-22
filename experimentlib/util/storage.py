@@ -27,12 +27,11 @@ class Registry(typing.Generic[T]):
 
         :param initial: iterable for initial insertion into this Registry
         """
-        typing.Generic.__init__(self)
-
         self._registry: typing.Dict[str, T] = {}
 
-        for item in initial:
-            self.register(item)
+        if initial:
+            for item in initial:
+                self.register(item)
 
     def __contains__(self, item):
         return self._safe_key(item) in self._registry
