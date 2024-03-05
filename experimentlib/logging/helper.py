@@ -7,7 +7,7 @@ import sys
 from experimentlib import logging
 
 
-def log_system(logger: typing.Optional[logging.ExtendedLogger] = None, level: int = logging.INFO):
+def log_system(logger: typing.Optional[logging.ExtendedLogger] = None, level: int = logging.INFO) -> None:
     if logger is None:
         logger = logging.get_logger(__name__)
 

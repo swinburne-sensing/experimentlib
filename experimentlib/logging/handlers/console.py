@@ -1,14 +1,14 @@
 import logging
 import re
 import sys
-from typing import IO, Mapping, Optional
+from typing import Mapping, Optional, TextIO
 
 import colorama
 
 from experimentlib.logging import levels
 
 
-class ColoramaStreamHandler(logging.StreamHandler):
+class ColoramaStreamHandler(logging.StreamHandler):  # type: ignore[type-arg]
     """ Colourised stream handler. """
     DEFAULT_COLOR_MAP: Mapping[int, int] = {
         levels.META: colorama.Fore.LIGHTBLUE_EX,
@@ -23,7 +23,7 @@ class ColoramaStreamHandler(logging.StreamHandler):
 
     __RE_TRACEBACK = re.compile(r'^[a-z._]+: ', re.IGNORECASE)
 
-    def __init__(self, stream: Optional[IO] = None,
+    def __init__(self, stream: Optional[TextIO] = None,
                  color_map: Optional[Mapping[int, int]] = None):
         stream = stream or sys.stdout
 
@@ -32,13 +32,13 @@ class ColoramaStreamHandler(logging.StreamHandler):
         self.color_map = color_map or self.DEFAULT_COLOR_MAP
 
     @property
-    def is_tty(self):
+    def is_tty(self) -> bool:
         # Check if stream is outputting to interactive session
         isatty = getattr(self.stream, 'isatty', None)
 
-        return isatty and isatty()
+        return bool(isatty and isatty())
 
-    def format(self, record: logging.LogRecord):
+    def format(self, record: logging.LogRecord) -> str:
         message = logging.StreamHandler.format(self, record)
 
         if self.is_tty:
@@ -46,7 +46,7 @@ class ColoramaStreamHandler(logging.StreamHandler):
 
         return message
 
-    def colorize(self, message: str, record: logging.LogRecord):
+    def colorize(self, message: str, record: logging.LogRecord) -> str:
         try:
             return f"{self.color_map[record.levelno]}{message}{colorama.Style.RESET_ALL}"
         except KeyError:

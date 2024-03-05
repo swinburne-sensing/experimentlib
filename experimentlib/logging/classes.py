@@ -2,32 +2,36 @@ from abc import ABCMeta
 from datetime import timedelta
 from time import sleep
 from timeit import default_timer
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Tuple, Type, TypeVar, Union
 
 from experimentlib import logging
 from experimentlib.util.classes import HybridMethod
 
 
+TMeta = TypeVar('TMeta', bound=type)
+TABCMeta = TypeVar('TABCMeta', bound=ABCMeta)
+
+
 class LoggedMeta(type):
     """ Metaclass that creates a logger instance for all classes derived from  """
 
-    def __new__(mcs, *args, logger_name: Optional[str] = None, **kwargs):
-        x = type.__new__(mcs, *args, **kwargs)
+    def __new__(cls: Type[TMeta], name: str, bases: Tuple[Type[object]], classdict: Dict[str, str]) -> TMeta:
+        x = type.__new__(cls, name, bases, classdict)
 
         # Assign class logger
-        x._logged_cls = logging.get_logger(args[0] + ':cls')
-        x._logged_cls.log(logging.META, 'Created')
+        x._logged_cls = logging.get_logger(name + ':cls')  # type: ignore[attr-defined]
+        x._logged_cls.log(logging.META, 'Created')  # type: ignore[attr-defined]
 
         return x
 
 
 class LoggedAbstractMeta(ABCMeta):
-    def __new__(mcs, *args, logger_name: Optional[str] = None, **kwargs):
-        x = ABCMeta.__new__(mcs, *args, **kwargs)
+    def __new__(cls: Type[TABCMeta], name: str, bases: Tuple[Type[object]], classdict: Dict[str, str]) -> TABCMeta:
+        x = ABCMeta.__new__(cls, name, bases, classdict)
 
         # Assign class logger
-        x._logged_cls = logging.get_logger(args[0] + ':cls')
-        x._logged_cls.log(logging.META, 'Created')
+        setattr(x, '_logged_cls', logging.get_logger(name + ':cls'))  # type: ignore[attr-defined]
+        x._logged_cls.log(logging.META, 'Created')  # type: ignore[attr-defined]
 
         return x
 
@@ -55,7 +59,7 @@ class _LoggedBase(object):
             return self._logged_cls
 
     def sleep(self, interval: Union[None, int, float, timedelta], cause: Optional[str] = None,
-              log_level: Optional[int] = None):
+              log_level: Optional[int] = None) -> None:
         """ Sleep for perceribed interval logging the entry and exit time.
 
         :param interval:

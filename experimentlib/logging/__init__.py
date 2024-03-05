@@ -20,29 +20,8 @@ _SUPPRESSED_LOGGERS = [
 
 class ExtendedLogger(logging.Logger):
     """ Extended logger class with additional logging levels and support for useful filtering arguments. """
-    @staticmethod
-    def _update_kwargs(notify: bool, event: bool, kwargs_dict) -> None:
-        """ Takes boolean arguments for notify and event and places them within the 'extra' key passed to Logger class
-        methods.
 
-        :param notify: if True this message should be marked as a notification
-        :param event: if True this message should be marked as an event
-        :param kwargs_dict: dict of keyword arguments passed to Logger methods
-        """
-        if 'extra' not in kwargs_dict:
-            kwargs_dict['extra'] = {}
-
-        if notify:
-            kwargs_dict['extra'].update({'notify': True})
-        else:
-            kwargs_dict['extra'].update({'notify': False})
-
-        if event:
-            kwargs_dict['extra'].update({'event': True})
-        else:
-            kwargs_dict['extra'].update({'event': False})
-
-    def log(self, level: int, msg: str, *args, notify: bool = False, event: bool = False, **kwargs) -> None:
+    def log(self, level: int, msg: object, *args: object, notify: bool = False, event: bool = False, **kwargs: typing.Any) -> None:
         """ og 'msg % args' with specified level.
 
         :param level: log severity level
@@ -54,9 +33,22 @@ class ExtendedLogger(logging.Logger):
         :return:
         """
         if self.isEnabledFor(level):
-            self._log(level, msg, args, **kwargs)
+            if 'extra' not in kwargs:
+                kwargs['extra'] = {}
 
-    def comm(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs) -> None:
+            if notify:
+                kwargs['extra'].update({'notify': True})
+            else:
+                kwargs['extra'].update({'notify': False})
+
+            if event:
+                kwargs['extra'].update({'event': True})
+            else:
+                kwargs['extra'].update({'event': False})
+            
+            super().log(level, msg, *args, **kwargs)
+
+    def comm(self, msg: object, *args: object, notify: bool = False, event: bool = False, **kwargs: typing.Any) -> None:
         """ Log 'msg % args' with severity 'COMM'.
 
         Useful for low-level communication logging, such as to external hardware.
@@ -67,11 +59,9 @@ class ExtendedLogger(logging.Logger):
         :param event: True when this log should be recorded as an event, False otherwise
         :param kwargs: additional keyword arguments passed to _log
         """
-        if self.isEnabledFor(COMM):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(COMM, msg, args, **kwargs)
+        self.log(COMM, msg, *args, notify=notify, event=event, **kwargs)
 
-    def trace(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs) -> None:
+    def trace(self, msg: object, *args: object, notify: bool = False, event: bool = False, **kwargs: typing.Any) -> None:
         """ Log 'msg % args' with severity 'TRACE'.
 
         Useful for low-level tracing, more detailed that typical debug messages.
@@ -82,11 +72,9 @@ class ExtendedLogger(logging.Logger):
         :param event: True when this log should be recorded as an event, False otherwise
         :param kwargs: additional keyword arguments passed to _log
         """
-        if self.isEnabledFor(TRACE):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(TRACE, msg, args, **kwargs)
+        self.log(TRACE, msg, *args, notify=notify, event=event, **kwargs)
 
-    def lock(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs) -> None:
+    def lock(self, msg: object, *args: object, notify: bool = False, event: bool = False, **kwargs: typing.Any) -> None:
         """ Log 'msg % args' with severity 'LOCK'.
 
         Useful for tracking lock/release state of shared objects.
@@ -97,11 +85,9 @@ class ExtendedLogger(logging.Logger):
         :param event: True when this log should be recorded as an event, False otherwise
         :param kwargs: additional keyword arguments passed to _log
         """
-        if self.isEnabledFor(LOCK):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(LOCK, msg, args, **kwargs)
+        self.log(LOCK, msg, *args, notify=notify, event=event, **kwargs)
 
-    def meta(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs) -> None:
+    def meta(self, msg: object, *args: object, notify: bool = False, event: bool = False, **kwargs: typing.Any) -> None:
         """ Log 'msg % args' with severity 'META'.
 
         Useful for logging about logging (eg. creation or destruction of logger objects).
@@ -112,39 +98,25 @@ class ExtendedLogger(logging.Logger):
         :param event: True when this log should be recorded as an event, False otherwise
         :param kwargs: additional keyword arguments passed to _log
         """
-        if self.isEnabledFor(META):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(META, msg, args, **kwargs)
+        self.log(META, msg, *args, notify=notify, event=event, **kwargs)
 
-    def debug(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs) -> None:
-        if self.isEnabledFor(DEBUG):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(DEBUG, msg, args, **kwargs)
+    def debug(self, msg: object, *args: object, notify: bool = False, event: bool = False, **kwargs: typing.Any) -> None:
+        self.log(DEBUG, msg, *args, notify=notify, event=event, **kwargs)
 
-    def info(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs) -> None:
-        if self.isEnabledFor(INFO):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(INFO, msg, args, **kwargs)
+    def info(self, msg: object, *args: object, notify: bool = False, event: bool = False, **kwargs: typing.Any) -> None:
+        self.log(INFO, msg, *args, notify=notify, event=event, **kwargs)
 
-    def warning(self, msg: str, *args, notify: bool = False, event: bool = False, **kwargs) -> None:
-        if self.isEnabledFor(WARNING):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(WARNING, msg, args, **kwargs)
+    def warning(self, msg: object, *args: object, notify: bool = False, event: bool = False, **kwargs: typing.Any) -> None:
+        self.log(WARNING, msg, *args, notify=notify, event=event, **kwargs)
 
-    def error(self, msg: str, *args, notify: bool = True, event: bool = True, **kwargs) -> None:
-        if self.isEnabledFor(ERROR):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(ERROR, msg, args, **kwargs)
+    def error(self, msg: object, *args: object, notify: bool = True, event: bool = True, **kwargs: typing.Any) -> None:
+        self.log(ERROR, msg, *args, notify=notify, event=event, **kwargs)
 
-    def exception(self, msg: str, *args, notify: bool = True, event: bool = True, exc_info: bool = True, **kwargs) -> None:
-        if self.isEnabledFor(ERROR):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(ERROR, msg, args, exc_info=exc_info, **kwargs)
+    def exception(self, msg: object, *args: object, **kwargs: typing.Any) -> None:
+        self.log(ERROR, msg, *args, notify=True, event=True, **kwargs)
 
-    def critical(self, msg: str, *args, notify: bool = True, event: bool = True, **kwargs) -> None:
-        if self.isEnabledFor(CRITICAL):
-            self._update_kwargs(notify, event, kwargs)
-            self._log(CRITICAL, msg, args, **kwargs)
+    def critical(self, msg: object, *args: object, notify: bool = True, event: bool = True, **kwargs: typing.Any) -> None:
+        self.log(CRITICAL, msg, *args, notify=notify, event=event, **kwargs)
 
 
 # Replace base logging class with extended version
@@ -167,7 +139,7 @@ def get_logger(name: typing.Optional[str] = None) -> ExtendedLogger:
 
 
 def basic_logging(filename: typing.Optional[str] = None, suppress_suggested: bool = True, include_thread: bool = False,
-                  include_process: bool = False, **kwargs) -> None:
+                  include_process: bool = False, **kwargs: typing.Any) -> None:
     """ Wrapper for standard basic logging that uses a colourised console stream by default.
 
     :param filename:
@@ -213,7 +185,7 @@ def dict_config(config: typing.Dict[str, typing.Any]) -> None:
     logging.config.dictConfig(config)
 
 
-def shutdown(*args, **kwargs) -> None:
+def shutdown(*args: typing.Any, **kwargs: typing.Any) -> None:
     """ Shortcut to logging.shutdown.
 
     :param args: passed to logging.shutdown

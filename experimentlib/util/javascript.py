@@ -23,7 +23,7 @@ _RE_VAR_ASSIGN = re.compile(r'\s*var\s+(\w+)\s+=\s+([^;]+);', re.MULTILINE)
 class JavascriptMapping(object):
     name: str = attr.ib()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -56,7 +56,7 @@ def _parse_dict(value: str) -> typing.Dict[typing.Union[int, str], T_ASSIGNMENT]
     return value_dict
 
 
-def _parse_list(value: str) -> typing.Sequence[str]:
+def _parse_list(value: str) -> typing.List[str]:
     value_list = []
     value_inst_list = []
 

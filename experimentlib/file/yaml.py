@@ -1,9 +1,10 @@
+from __future__ import annotations
 import getpass
 import os.path
 import socket
 import tempfile
 from datetime import datetime, timedelta, timezone
-from typing import Any, IO, Iterable, Mapping, Optional, Union
+from typing import Any, Callable, Iterable, Mapping, Optional, TextIO, Union
 
 import yaml
 
@@ -12,7 +13,7 @@ from experimentlib.logging import classes
 from experimentlib.util import arg_helper, classes as util_classes, constant, time as elib_time
 
 
-class ExtendedError(yaml.YAMLError):
+class ExtendedError(yaml.YAMLError):  # type: ignore[misc]
     """ Base class for errors generated via the extended YAML loader. """
     pass
 
@@ -55,7 +56,7 @@ class ResolveTagError(ConstructorError):
     pass
 
 
-class ExtendedLoader(classes.Logged, yaml.SafeLoader):
+class ExtendedLoader(classes.Logged, yaml.SafeLoader):  # type: ignore[misc]
     """ An extended YAML loader including additional tags and security features. """
 
     # Shared mapping for format constructor (environment and system variables)
@@ -67,13 +68,13 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
         **{'env_' + env_var: env_val for env_var, env_val in os.environ.items()}
     }
 
-    def __init__(self, stream: Union[str, IO], enable_resolve: bool = False,
+    def __init__(self, stream: Union[str, TextIO], enable_resolve: bool = False,
                  include_paths: Optional[Iterable[str]] = None,
                  format_kwargs: Optional[Mapping[str, str]] = None):
         self._stream_root: Optional[str]
         stream_filename: str
 
-        if isinstance(stream, IO):
+        if isinstance(stream, TextIO):
             self._stream_root, stream_filename = os.path.split(stream.name)
         else:
             self._stream_root = None
@@ -131,7 +132,7 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
 
         return format_str.format(**format_mapping)
 
-    def _format_node(self, node: yaml.ScalarNode):
+    def _format_node(self, node: yaml.ScalarNode) -> str:
         """
 
         :param node: YAML node
@@ -147,7 +148,7 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
             raise FormatTagError('Unhandled exception', node) from exc
 
     @staticmethod
-    def construct_datetime(_, node: yaml.ScalarNode) -> datetime:
+    def construct_datetime(_: Any, node: yaml.ScalarNode) -> datetime:
         """ Construct datetime from node string.
 
         :param _: unused
@@ -157,7 +158,7 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
         return arg_helper.parse_datetime(node.value)
 
     @staticmethod
-    def construct_datetime_utc(_, node: yaml.ScalarNode) -> datetime:
+    def construct_datetime_utc(_: Any, node: yaml.ScalarNode) -> datetime:
         """ Construct datetime from node string.
 
         :param _: unused
@@ -167,7 +168,7 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
         return arg_helper.parse_datetime(node.value, timezone.utc)
 
     @staticmethod
-    def construct_env(_, node: yaml.ScalarNode) -> Optional[str]:
+    def construct_env(_: Any, node: yaml.ScalarNode) -> Optional[str]:
         """ Construct string from environment variable specified in node.
 
         :param _: unused
@@ -181,14 +182,14 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
                 # Return nothing when no default is provided
                 return None
             elif len(node) == 2:
-                return node[1]
+                return str(node[1])
             else:
                 raise EnvironmentTagError('Tag should only contain variable name and default value', node)
 
         return os.environ[node[0]]
 
     @staticmethod
-    def construct_env_required(_, node: yaml.ScalarNode) -> str:
+    def construct_env_required(_: Any, node: yaml.ScalarNode) -> str:
         """ Construct string from environment variable specified in node.
 
         :param _: unused
@@ -267,7 +268,7 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
             raise ResolveTagError('Exception thrown while resolving node', node) from exc
 
     @staticmethod
-    def construct_timedelta(_, node) -> timedelta:
+    def construct_timedelta(_: Any, node: yaml.ScalarNode) -> timedelta:
         node_unit = unit.parse(node.value)
 
         node_seconds = node_unit.m_as(unit.registry.sec)
@@ -275,14 +276,14 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):
         return timedelta(seconds=node_seconds)
 
     @classmethod
-    def factory(cls, *args, **kwargs):
+    def factory(cls, *args: Any, **kwargs: Any) -> Callable[..., ExtendedLoader]:
         """ Get a wrapped constructor for ExtendedLoader with include paths restricted to the specified paths.
 
         :param args: passed to constructor
         :param kwargs: passed to constructor
         :return: wrapped constructor
         """
-        def f(stream):
+        def f(stream: Union[str, TextIO]) -> ExtendedLoader:
             return cls(stream, *args, **kwargs)
 
         return f
@@ -299,7 +300,7 @@ ExtendedLoader.add_constructor('!resolve', ExtendedLoader.construct_resolve)
 ExtendedLoader.add_constructor('!timedelta', ExtendedLoader.construct_timedelta)
 
 
-def load(stream: Union[str, IO], *args, **kwargs) -> Any:
+def load(stream: Union[str, TextIO], *args: Any, **kwargs: Any) -> Any:
     """ Equivalent to yaml.load using the extended loader
 
     :param stream: input string or stream object for parsing

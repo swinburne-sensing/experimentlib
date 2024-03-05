@@ -12,7 +12,7 @@ import typing
 from logging.config import ConvertingDict, ConvertingList, valid_ident
 
 
-def _resolve_converting_dict(convert_dict: ConvertingDict) -> typing.Dict:
+def _resolve_converting_dict(convert_dict: ConvertingDict) -> typing.Any:
     # Check for cached conversion result
     if '__resolved__' in convert_dict:
         return convert_dict['__resolved__']
@@ -80,7 +80,7 @@ class BufferedHandler(logging.Handler):
 
             return tuple(self._record_buffer)
 
-    def _update(self):
+    def _update(self) -> None:
         """ Discard records beyond the configured record count limit and/or configures record timeout.
         """
         if self._record_limit:
@@ -123,8 +123,8 @@ class QueueListenerHandler(logging.handlers.QueueHandler):
             # Stop listener on exit
             atexit.register(self.stop)
 
-    def start(self):
+    def start(self) -> None:
         self._listener.start()
 
-    def stop(self):
+    def stop(self) -> None:
         self._listener.stop()

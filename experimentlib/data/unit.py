@@ -17,7 +17,7 @@ class QuantityParseError(experimentlib.ExperimentLibError):
 
 
 # Handler for percent sign
-def _handle_symbols(x):
+def _handle_symbols(x: str) -> str:
     return x.replace('%', 'pct').replace('μ', 'u')
 
 
@@ -27,7 +27,7 @@ registry = pint.UnitRegistry(autoconvert_offset_to_baseunit=True, preprocessors=
 
 # Hack to make Quantity objects pickle-able by fixing implementation used in registry
 # noinspection PyProtectedMember
-class Quantity(pint.quantity._Quantity):
+class Quantity(pint.quantity._Quantity):  # type: ignore[misc]
     _REGISTRY = registry
 
 
@@ -127,7 +127,7 @@ def _quantity_format_decorator(format_method: typing.Callable[[Quantity, str], s
 
 def _unit_format_decorator(format_method: typing.Callable[[pint.Unit, str], str]) \
         -> typing.Callable[[pint.Unit, str], str]:
-    def format_decorator(self, spec: str) -> str:
+    def format_decorator(self: pint.Unit, spec: str) -> str:
         unit_str = format_method(self, spec)
 
         if unit_str.endswith('pct'):
@@ -138,8 +138,8 @@ def _unit_format_decorator(format_method: typing.Callable[[pint.Unit, str], str]
     return format_decorator
 
 
-Quantity.__format__ = _quantity_format_decorator(Quantity.__format__)  # type: ignore
-Unit.__format__ = _unit_format_decorator(Unit.__format__)  # type: ignore
+Quantity.__format__ = _quantity_format_decorator(Quantity.__format__)  # type: ignore[arg-type, assignment, method-assign]
+Unit.__format__ = _unit_format_decorator(Unit.__format__)  # type: ignore[arg-type, assignment, method-assign]
 
 
 # Type hints
@@ -233,7 +233,7 @@ def parse_magnitude(x: T_PARSE_QUANTITY, magnitude_unit: T_PARSE_UNIT,
         # Assume default parsing unit is same as casting unit
         input_unit = magnitude_unit
 
-    return parse(x, input_unit).m_as(magnitude_unit)
+    return float(parse(x, input_unit).m_as(magnitude_unit))
 
 
 def parse_timedelta(x: T_PARSE_TIMEDELTA) -> timedelta:
@@ -267,7 +267,7 @@ def converter(to_unit: typing.Optional[T_PARSE_UNIT] = None,
     """
     to_unit = to_unit or registry.dimensionless
 
-    def f(x: T_PARSE_QUANTITY):
+    def f(x: T_PARSE_QUANTITY) -> Quantity:
         if x is None:
             if not optional:
                 raise QuantityParseError('Input to converter cannot be None')

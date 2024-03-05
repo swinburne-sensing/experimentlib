@@ -1,7 +1,8 @@
 import importlib
 import inspect
 import pkgutil
-from typing import List
+from typing import List, Union
+from types import ModuleType
 
 
 def get_call_context(root_module: str, discard_calls: int = 1, filter_app: bool = True) -> List[str]:
@@ -30,7 +31,7 @@ def get_call_context(root_module: str, discard_calls: int = 1, filter_app: bool 
     return context_list
 
 
-def import_submodules(package, recursive=True):
+def import_submodules(package: Union[str, ModuleType], recursive: bool = True) -> None:
     """ Import all submodules within a given package.
 
     :param package: base package to begin import from
@@ -39,7 +40,7 @@ def import_submodules(package, recursive=True):
     if isinstance(package, str):
         package = importlib.import_module(package)
 
-    for loader, name, is_pkg in pkgutil.walk_packages(package.__path__):
+    for _, name, is_pkg in pkgutil.walk_packages(package.__path__):
         full_name = package.__name__ + '.' + name
 
         importlib.import_module(full_name)

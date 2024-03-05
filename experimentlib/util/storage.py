@@ -33,16 +33,16 @@ class Registry(typing.Generic[T]):
             for item in initial:
                 self.register(item)
 
-    def __contains__(self, item):
+    def __contains__(self, item: typing.Any) -> bool:
         return self._safe_key(item) in self._registry
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: typing.Any) -> T:
         return self._registry[self._safe_key(item)]
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: typing.Any) -> T:
         return self[item]
 
-    def __iter__(self):
+    def __iter__(self) -> typing.Iterator[T]:
         return iter(self._registry.values())
 
     def register(self, item: T) -> None:
@@ -59,7 +59,4 @@ class Registry(typing.Generic[T]):
         :param x: input
         :return: Registry compatible key
         """
-        if not isinstance(x, str):
-            x = str(x)
-
-        return x.replace(' ', '_').replace('-', '_').lower()
+        return str(x).replace(' ', '_').replace('-', '_').lower()

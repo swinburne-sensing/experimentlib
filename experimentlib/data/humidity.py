@@ -111,7 +111,7 @@ def dew_to_rel(temperature: _TYPE_INPUT, dew_temperature: _TYPE_INPUT) -> unit.Q
     pws = _humidity_calc_pws_exp(temperature)
     pwd = _humidity_calc_pws_exp(dew_temperature)
 
-    return unit.Quantity(pwd / pws, unit.dimensionless).to(unit_rel)
+    return unit.Quantity(pwd / pws, unit.dimensionless).to(unit_rel)  # type:ignore[no-any-return]
 
 
 # Calculate dew point from temperature and relative_humidity

@@ -24,16 +24,15 @@ setattr(logging, 'TRACE', logging.DEBUG - 1)
 setattr(logging, 'COMM', logging.DEBUG + 1)
 
 # noinspection PyUnresolvedReferences
-logging.addLevelName(logging.META, 'META')  # type: ignore
-logging.addLevelName(logging.LOCK, 'LOCKS')  # type: ignore
-logging.addLevelName(logging.TRACE, 'TRACE')  # type: ignore
-logging.addLevelName(logging.COMM, 'COMM')  # type: ignore
+logging.addLevelName(logging.META, 'META')  # type: ignore[attr-defined]
+logging.addLevelName(logging.LOCK, 'LOCKS')  # type: ignore[attr-defined]
+logging.addLevelName(logging.TRACE, 'TRACE')  # type: ignore[attr-defined]
+logging.addLevelName(logging.COMM, 'COMM')  # type: ignore[attr-defined]
 
-META = logging.META  # type: ignore
-LOCK = logging.LOCK  # type: ignore
-TRACE = logging.TRACE  # type: ignore
-COMM = logging.COMM  # type: ignore
-
+META = logging.META  # type: ignore[attr-defined]
+LOCK = logging.LOCK  # type: ignore[attr-defined]
+TRACE = logging.TRACE  # type: ignore[attr-defined]
+COMM = logging.COMM  # type: ignore[attr-defined]
 
 NAME_TO_LEVEL = {
     'NOTSET': NOTSET,

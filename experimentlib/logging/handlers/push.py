@@ -21,9 +21,9 @@ class PushoverHandler(logging.Handler):
         HIGH = 1
         REQUIRE_CONFIRM = 2
 
-    class _RetryPushoverError(tenacity.retry_base):
+    class _RetryPushoverError(tenacity.retry_base):  # type:ignore[misc, name-defined]
         def __call__(self, retry_state: tenacity.RetryCallState) -> bool:
-            exception = retry_state.outcome.exception()
+            exception = retry_state.outcome.exception()  # type:ignore[union-attr]
 
             # Retry on connection or protocol errors
             if any((isinstance(exception, t) for t in (ConnectionError, JSONDecodeError))):
@@ -121,8 +121,12 @@ class PushoverHandler(logging.Handler):
         except pushover.RequestError:
             self.handleError(record)
 
-    @tenacity.retry(retry=_RetryPushoverError(), stop=tenacity.stop_after_delay(600),
-                    wait=tenacity.wait_fixed(30))
+    
+    @tenacity.retry(
+        retry=_RetryPushoverError(),
+        stop=tenacity.stop_after_delay(600), # type: ignore[attr-defined, no-untyped-call]
+        wait=tenacity.wait_fixed(30) # type: ignore[attr-defined, no-untyped-call]
+    )
     def _send_message(self, msg: str, priority: int, title: str, timestamp: int, html: bool) -> None:
         if self._client is None:
             # Skip is API token is not configured

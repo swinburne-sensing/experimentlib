@@ -90,7 +90,7 @@ class SimpleArgParser(object):
     def add_argument(self, name: str, default: Optional[Any] = None,
                      converter: Union[None, str, Callable[[str], Any]] = None,
                      validator: Optional[Callable[[Any], bool]] = None, values: Optional[Sequence[Any]] = None,
-                     greedy: bool = False, required: bool = True):
+                     greedy: bool = False, required: bool = True) -> None:
         """
 
         :param name:

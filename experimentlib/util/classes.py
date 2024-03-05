@@ -32,7 +32,10 @@ class HybridMethod(object):
         return hybrid
 
 
-def __recurse_subclasses(subclass_list):
+TObject = typing.TypeVar('TObject', bound=object)
+
+
+def __recurse_subclasses(subclass_list: typing.List[typing.Type[TObject]]) -> typing.List[typing.Type[TObject]]:
     return_list = []
 
     for subclass in subclass_list:
@@ -47,10 +50,7 @@ def __recurse_subclasses(subclass_list):
     return return_list
 
 
-T_OBJECT = typing.TypeVar('T_OBJECT', bound=object)
-
-
-def get_subclasses(class_root: typing.Type[T_OBJECT]) -> typing.List[typing.Type[T_OBJECT]]:
+def get_subclasses(class_root: typing.Type[TObject]) -> typing.List[typing.Type[TObject]]:
     """ Get a list of subclasses for a given parent class.
 
     :param class_root: parent class type
@@ -59,7 +59,7 @@ def get_subclasses(class_root: typing.Type[T_OBJECT]) -> typing.List[typing.Type
     return __recurse_subclasses([class_root])
 
 
-def reference_from_str(name: str, parent: typing.Any):
+def reference_from_str(name: str, parent: typing.Any) -> typing.Any:
     """ Get a class from a given module given the classes name as a string.
 
     :param name: Name of the class to instantiate
@@ -75,7 +75,7 @@ def reference_from_str(name: str, parent: typing.Any):
     return functools.reduce(getattr, name.split('.'), parent)
 
 
-def instance_from_dict(config: typing.Dict[str, typing.Any], parent: typing.Any):
+def instance_from_dict(config: typing.Dict[str, typing.Any], parent: typing.Any) -> typing.Any:
     """ Instantiate a class from a given module given a dict containing the class name as a value in the dict.
 
     :param config: Object description as a dict, requires at least a value for 'class'

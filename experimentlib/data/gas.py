@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import re
-from typing import List, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 import attr
 
@@ -56,12 +56,12 @@ class GasProperties(storage.RegistryEntry):
         kw_only=True
     )
     specific_heat: unit.Quantity = attr.ib(
-        converter=unit.converter(unit.registry.cal / unit.registry.g, True),
+        converter=unit.converter(unit.registry.cal / unit.registry.g, True),  # type: ignore[misc]
         default=None,
         kw_only=True
     )
     density: unit.Quantity = attr.ib(
-        converter=unit.converter(unit.registry.g / unit.registry.L, True),
+        converter=unit.converter(unit.registry.g / unit.registry.L, True),  # type: ignore[misc]
         default=None,
         kw_only=True
     )
@@ -72,7 +72,7 @@ class GasProperties(storage.RegistryEntry):
     # Humidity flag
     humid: bool = attr.ib(default=False, kw_only=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.symbol is not None:
             return self.symbol
         else:
@@ -310,21 +310,21 @@ registry = storage.Registry([
 
 
 def _quantity_mag_rounded(x: unit.Quantity) -> float:
-    return round(x.m_as(unit.dimensionless), 12)
+    return round(float(x.m_as(unit.dimensionless)), 12)
 
 
 @attr.s(frozen=True)
 class Component(object):
     # Actual concentration
     quantity: unit.Quantity = attr.ib(
-        converter=unit.converter(),
+        converter=unit.converter(),  # type: ignore[misc]
         eq=_quantity_mag_rounded
     )
 
     # Gas type
     properties: GasProperties = attr.ib()
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         # Check for negative concentrations
         if self.quantity < 0:
             raise NegativeQuantityError('Gas concentration cannot be below zero')
@@ -345,13 +345,13 @@ class Component(object):
 
     @property
     def gcf(self) -> float:
-        return (0.3106 * self.properties.molecular_structure.value /
-                (self.properties.density * self.properties.specific_heat)).magnitude
+        return float((0.3106 * self.properties.molecular_structure.value / 
+                      (self.properties.density * self.properties.specific_heat)).magnitude)
     
-    def __rmul__(self, other):
+    def __rmul__(self, other: Any) -> Component:
         return Component(other * self.quantity, self.properties)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.quantity!s} {self.properties!s}"
 
 
@@ -365,7 +365,7 @@ class Mixture(object):
 
     _GAS_CONCENTRATION_PATTERN = re.compile(r'^([\d]+\.?[\d]*)[ ]?([%\w]+) ([\w\s-]+)')
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
 
         # Check components and balance do not exceed 100% within a small tolerance (ppt)
         overall_quantity = self.balance.quantity
@@ -396,7 +396,7 @@ class Mixture(object):
             if component.properties.humid:
                 ratio += component.quantity
 
-        return unit.Quantity(ratio, unit.dimensionless).to(unit.registry.pct)
+        return unit.Quantity(ratio, unit.dimensionless).to(unit.registry.pct)  # type:ignore[no-any-return]
 
     @property
     def is_inert(self) -> bool:
@@ -414,16 +414,18 @@ class Mixture(object):
         """
         components = self.components + [self.balance]
 
-        return (0.3106 * sum((c.quantity * c.properties.molecular_structure.value for c in components)) /
-                sum((c.quantity * c.properties.density * c.properties.specific_heat for c in components))).magnitude
+        return float(
+            (0.3106 * sum((c.quantity * c.properties.molecular_structure.value for c in components)) / 
+             sum((c.quantity * c.properties.density * c.properties.specific_heat for c in components))).magnitude
+        )
 
-    def __str__(self):
+    def __str__(self) -> str:
         if len(self.components) > 0:
             return f"{', '.join(map(str, self.components))}"
         else:
             return str(self.balance)
 
-    def __mul__(self, other):
+    def __mul__(self, other: Any) -> Mixture:
         if isinstance(other, int):
             other = float(other)
         elif isinstance(other, unit.Quantity):
@@ -440,11 +442,11 @@ class Mixture(object):
 
         return Mixture(scaled_gases, self.balance)
 
-    def __rmul__(self, other):
-        return self * other
+    def __rmul__(self, other: Any) -> Mixture:
+        return self.__mul__(other)
 
-    def __add__(self, other):
-        gas_component_dict = {}
+    def __add__(self, other: Any) -> Mixture:
+        gas_component_dict: Dict[GasProperties, unit.Quantity] = {}
 
         if isinstance(other, Mixture):
             if self.balance.properties != other.balance.properties:
@@ -467,8 +469,8 @@ class Mixture(object):
         else:
             raise NotImplementedError(f"Cannot add {type(other)} to Mixture")
 
-    def __radd__(self, other):
-        return self + other
+    def __radd__(self, other: Any) -> Mixture:
+        return self.__add__(other)
 
     @classmethod
     def auto_balance(cls, components: Sequence[Component], balance: GasProperties) -> Mixture:
@@ -486,7 +488,7 @@ class Mixture(object):
         return Mixture(list(components), Component(balance_quantity, balance))
 
     @classmethod
-    def from_dict(cls, gas_mapping: Mapping[str, str]):
+    def from_dict(cls, gas_mapping: Mapping[str, str]) -> Mixture:
         """
 
         :param gas_mapping:

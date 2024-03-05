@@ -1,8 +1,11 @@
-from typing import Any, Iterable, Sequence
+import typing
 from itertools import tee
 
 
-def flatten_list(iterable: Iterable[Any]):
+TValue = typing.TypeVar('TValue')
+
+
+def flatten_list(iterable: typing.Iterable[typing.Any]) -> typing.Iterable[typing.Any]:
     for item in iterable:
         if isinstance(item, list) or isinstance(item, tuple) or isinstance(item, set):
             for sub_item in flatten_list(item):
@@ -11,7 +14,7 @@ def flatten_list(iterable: Iterable[Any]):
             yield item
 
 
-def iterate_chunk(data: Sequence[Any], size: int):
+def iterate_chunk(data: typing.Sequence[TValue], size: int) -> typing.Generator[typing.Sequence[TValue], None, None]:
     """ Get iterator to return portions of a sequence in chunks of a maximum size.
 
     :param data: input sequence
@@ -22,7 +25,7 @@ def iterate_chunk(data: Sequence[Any], size: int):
         yield data[n:n + size]
 
 
-def iterate_pair(data: Iterable[Any]):
+def iterate_pair(data: typing.Iterable[TValue]) -> typing.Iterable[typing.Tuple[TValue, TValue]]:
     """ Get iterator to return pairs of elements from an iterable.
 
     :param data: input iterator
