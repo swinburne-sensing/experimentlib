@@ -74,7 +74,7 @@ class ExtendedLoader(classes.Logged, yaml.SafeLoader):  # type: ignore[misc]
         self._stream_root: Optional[str]
         stream_filename: str
 
-        if isinstance(stream, TextIO):
+        if not isinstance(stream, str):
             self._stream_root, stream_filename = os.path.split(stream.name)
         else:
             self._stream_root = None
