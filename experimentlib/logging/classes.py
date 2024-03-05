@@ -20,7 +20,7 @@ class LoggedMeta(type):
 
         # Assign class logger
         x._logged_cls = logging.get_logger(name + ':cls')  # type: ignore[attr-defined]
-        x._logged_cls.log(logging.META, 'Created')  # type: ignore[attr-defined]
+        x._logged_cls.log(logging.META, 'Created', stacklevel=2)  # type: ignore[attr-defined]
 
         return x
 
@@ -31,7 +31,7 @@ class LoggedAbstractMeta(ABCMeta):
 
         # Assign class logger
         setattr(x, '_logged_cls', logging.get_logger(name + ':cls'))  # type: ignore[attr-defined]
-        x._logged_cls.log(logging.META, 'Created')  # type: ignore[attr-defined]
+        x._logged_cls.log(logging.META, 'Created', stacklevel=2)  # type: ignore[attr-defined]
 
         return x
 
@@ -44,7 +44,7 @@ class _LoggedBase(object):
         :param logger_instance_name: optional string to append to logger name
         """
         self._logged_obj = logging.get_logger(self.__class__.__name__ + ':' + (logger_instance_name or 'obj'))
-        self._logged_obj.meta('Created')
+        self._logged_obj.meta('Created', stacklevel=2)
 
     @HybridMethod
     def logger(self) -> logging.ExtendedLogger:
@@ -59,7 +59,7 @@ class _LoggedBase(object):
             return self._logged_cls
 
     def sleep(self, interval: Union[None, int, float, timedelta], cause: Optional[str] = None,
-              log_level: Optional[int] = None) -> None:
+              silent: bool = False, log_level: Optional[int] = None) -> None:
         """ Sleep for perceribed interval logging the entry and exit time.
 
         :param interval:
@@ -67,7 +67,7 @@ class _LoggedBase(object):
         :param log_level: log level, defaults to LOCK
         :return:
         """
-        log_level = log_level or logging.LOCK
+        log_level = log_level or logging.SLEEP
 
         if isinstance(interval, timedelta):
             interval = interval.total_seconds()
@@ -76,10 +76,22 @@ class _LoggedBase(object):
             return
 
         tic = default_timer()
-        self.logger().log(log_level, f"Sleep {interval:.3g} sec (cause: {cause if cause else 'unspecified'})")
+        if not silent:
+            self.logger().log(
+                log_level,
+                f"Sleep {interval:.3g} sec (cause: {cause if cause else 'unspecified'})",
+                stacklevel=2
+            )
+        
         sleep(interval)
-        self.logger().log(log_level, f"Sleep complete (cause: {cause if cause else 'unspecified'}, "
-                                     f"target: {interval:.3g} sec, actual: {(default_timer() - tic):.6g} sec)")
+
+        if not silent:
+            self.logger().log(
+                log_level,
+                f"Sleep complete (cause: {cause if cause else 'unspecified'}, target: {interval:.3g} sec, "
+                f"actual: {(default_timer() - tic):.6g} sec)",
+                stacklevel=2
+            )
 
 
 class Logged(_LoggedBase, metaclass=LoggedMeta):

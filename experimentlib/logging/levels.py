@@ -1,7 +1,7 @@
 import logging
 
 
-__all__ = ['NOTSET', 'META', 'LOCK', 'TRACE', 'DEBUG', 'COMM', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'NAME_TO_LEVEL']
+__all__ = ['NOTSET', 'META', 'LOCK', 'TRACE', 'SLEEP', 'DEBUG', 'COMM', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', 'NAME_TO_LEVEL']
 
 
 # Logging level aliases
@@ -17,9 +17,11 @@ CRITICAL = logging.CRITICAL
 # Logging about logging
 setattr(logging, 'META', logging.NOTSET + 1)
 # Logging lock acquisition/release
-setattr(logging, 'LOCK', logging.DEBUG - 2)
+setattr(logging, 'LOCK', logging.DEBUG - 3)
 # Logging for detailed debugging
-setattr(logging, 'TRACE', logging.DEBUG - 1)
+setattr(logging, 'TRACE', logging.DEBUG - 2)
+# Logging for sleep
+setattr(logging, 'SLEEP', logging.DEBUG - 1)
 # Logging external I/O
 setattr(logging, 'COMM', logging.DEBUG + 1)
 
@@ -27,11 +29,13 @@ setattr(logging, 'COMM', logging.DEBUG + 1)
 logging.addLevelName(logging.META, 'META')  # type: ignore[attr-defined]
 logging.addLevelName(logging.LOCK, 'LOCKS')  # type: ignore[attr-defined]
 logging.addLevelName(logging.TRACE, 'TRACE')  # type: ignore[attr-defined]
+logging.addLevelName(logging.SLEEP, 'SLEEP')  # type: ignore[attr-defined]
 logging.addLevelName(logging.COMM, 'COMM')  # type: ignore[attr-defined]
 
 META = logging.META  # type: ignore[attr-defined]
 LOCK = logging.LOCK  # type: ignore[attr-defined]
 TRACE = logging.TRACE  # type: ignore[attr-defined]
+SLEEP = logging.SLEEP  # type: ignore[attr-defined]
 COMM = logging.COMM  # type: ignore[attr-defined]
 
 NAME_TO_LEVEL = {
@@ -39,6 +43,7 @@ NAME_TO_LEVEL = {
     'META': META,
     'LOCK': LOCK,
     'TRACE': TRACE,
+    'SLEEP': SLEEP,
     'DEBUG': DEBUG,
     'COMM': COMM,
     'INFO': INFO,
