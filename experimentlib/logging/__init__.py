@@ -113,7 +113,7 @@ class ExtendedLogger(logging.Logger):
         self.log(ERROR, msg, *args, notify=notify, event=event, **kwargs)
 
     def exception(self, msg: object, *args: object, **kwargs: typing.Any) -> None:
-        self.log(ERROR, msg, *args, notify=True, event=True, **kwargs)
+        self.log(ERROR, msg, *args, notify=True, event=True, exc_info=True, **kwargs)
 
     def critical(self, msg: object, *args: object, notify: bool = True, event: bool = True, **kwargs: typing.Any) -> None:
         self.log(CRITICAL, msg, *args, notify=notify, event=event, **kwargs)
