@@ -277,33 +277,3 @@ def converter(to_unit: typing.Optional[T_PARSE_UNIT] = None,
         return parse(x, to_unit)
 
     return f
-
-
-def return_converter(to_unit: T_PARSE_UNIT, allow_none: bool = False):
-    """ Decorator to convert returned result to a Quantity.
-
-    :param to_unit:
-    :param allow_none:
-    :return:
-    """
-    to_unit = parse_unit(to_unit)
-
-    def wrapper_decorator(func):
-        @functools.wraps(func)
-        def wrapper_result(*args, **kwargs):
-            result = func(*args, **kwargs)
-
-            if result is None:
-                if not allow_none:
-                    raise ValueError('Expected numeric result')
-
-                return None
-
-            if not isinstance(result, Quantity):
-                raise ValueError(f"Decorated method returned {type(result)}, expected Quantity")
-
-            return result.to(to_unit)
-
-        return wrapper_result
-
-    return wrapper_decorator
